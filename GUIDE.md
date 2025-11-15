@@ -48,8 +48,9 @@ python3 game.py
 2. **Armor Shop** - Browse and purchase armor
 3. **Combat** - Fight enemies (requires 25 energy)
 4. **Rest** - Restore 50 health and 50 mana
-5. **Save Game** - Save your progress
-6. **Exit** - Quit the game (option to save)
+5. **View Leaderboard** - See rankings of all players
+6. **Save Game** - Save your progress
+7. **Exit** - Quit the game (option to save)
 
 ## ⚔️ Combat Actions
 
@@ -66,6 +67,7 @@ During combat you can:
 - Energy regenerates automatically, so don't worry if you run out
 - Level up by gaining experience in combat
 - Magical weapons deal more damage but require mana
+- Check the leaderboard to see how you rank against other players!
 
 ## 📊 Leveling System
 
@@ -82,6 +84,16 @@ During combat you can:
 - Game automatically saves to `savegame.json`
 - Load your saved game from the main menu
 - Save before exiting to preserve progress
+- Your stats are automatically added to the leaderboard when you save
+
+## 🏆 Leaderboard System
+
+- All saved players appear on the leaderboard
+- Rankings are based on level first, then experience points
+- Top 3 players get special medal icons (🥇 Gold, 🥈 Silver, 🥉 Bronze)
+- Displays key stats: Level, Experience, Gold, and equipped Weapon
+- Updates automatically every time you save your game
+- Compete with friends to reach the top of the leaderboard!
 
 ## 🎯 Strategy Guide
 

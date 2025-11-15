@@ -211,6 +211,7 @@ class Game:
         self.player = Player()
         self.shop = Shop()
         self.save_file = "savegame.json"
+        self.leaderboard_file = "leaderboard.json"
     
     def display_status(self):
         """Display player status"""
@@ -409,6 +410,8 @@ class Game:
             with open(self.save_file, 'w') as f:
                 json.dump(self.player.to_dict(), f, indent=2)
             print("\n💾 Game saved successfully!")
+            # Update leaderboard
+            self.update_leaderboard()
         except Exception as e:
             print(f"\n❌ Failed to save game: {e}")
     
@@ -446,6 +449,76 @@ class Game:
         except Exception as e:
             print(f"\n❌ Failed to load game: {e}")
             return False
+    
+    def update_leaderboard(self):
+        """Update leaderboard with current player stats"""
+        try:
+            # Load existing leaderboard
+            leaderboard = []
+            try:
+                with open(self.leaderboard_file, 'r') as f:
+                    leaderboard = json.load(f)
+            except FileNotFoundError:
+                pass
+            
+            # Create player entry
+            player_entry = {
+                'name': self.player.name,
+                'level': self.player.level,
+                'experience': self.player.experience,
+                'gold': self.player.gold,
+                'max_health': self.player.max_health,
+                'weapon': self.player.weapon.name if self.player.weapon else "None",
+                'armor': self.player.armor.name if self.player.armor else "None"
+            }
+            
+            # Update or add player to leaderboard
+            updated = False
+            for i, entry in enumerate(leaderboard):
+                if entry['name'] == self.player.name:
+                    leaderboard[i] = player_entry
+                    updated = True
+                    break
+            
+            if not updated:
+                leaderboard.append(player_entry)
+            
+            # Save updated leaderboard
+            with open(self.leaderboard_file, 'w') as f:
+                json.dump(leaderboard, f, indent=2)
+                
+        except Exception as e:
+            print(f"\n⚠️  Failed to update leaderboard: {e}")
+    
+    def display_leaderboard(self):
+        """Display the leaderboard"""
+        try:
+            with open(self.leaderboard_file, 'r') as f:
+                leaderboard = json.load(f)
+            
+            if not leaderboard:
+                print("\n📊 Leaderboard is empty!")
+                return
+            
+            # Sort by level (descending), then by experience (descending)
+            leaderboard.sort(key=lambda x: (x['level'], x['experience']), reverse=True)
+            
+            print("\n" + "="*70)
+            print("🏆 LEADERBOARD 🏆".center(70))
+            print("="*70)
+            print(f"{'Rank':<6} {'Name':<15} {'Level':<7} {'Exp':<10} {'Gold':<10} {'Weapon':<15}")
+            print("-"*70)
+            
+            for i, entry in enumerate(leaderboard, 1):
+                rank_icon = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
+                print(f"{rank_icon:<6} {entry['name']:<15} {entry['level']:<7} {entry['experience']:<10} {entry['gold']:<10} {entry['weapon']:<15}")
+            
+            print("="*70)
+            
+        except FileNotFoundError:
+            print("\n📊 Leaderboard is empty! Play the game and save to appear on the leaderboard.")
+        except Exception as e:
+            print(f"\n❌ Failed to load leaderboard: {e}")
     
     def main_menu(self):
         """Main game menu"""
@@ -488,8 +561,9 @@ class Game:
             print("2. Armor Shop")
             print("3. Combat (Costs 25 Energy)")
             print("4. Rest")
-            print("5. Save Game")
-            print("6. Exit")
+            print("5. View Leaderboard")
+            print("6. Save Game")
+            print("7. Exit")
             
             choice = input("\nWhat would you like to do? ").strip()
             
@@ -502,8 +576,10 @@ class Game:
             elif choice == "4":
                 self.rest()
             elif choice == "5":
-                self.save_game()
+                self.display_leaderboard()
             elif choice == "6":
+                self.save_game()
+            elif choice == "7":
                 print("\n👋 Thanks for playing High Wizardy!")
                 save = input("Save game before exit? (y/n): ").strip().lower()
                 if save == 'y':

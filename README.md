@@ -13,6 +13,7 @@ High Wizardy is a text-based RPG with an exciting combat system!
 - **Armor Shop**: Purchase armor to defend yourself in battle
 - **Mana System**: Use mana for magical attacks
 - **Experience & Leveling**: Gain experience and level up to become stronger
+- **Leaderboard**: Compete with other players and see your ranking
 - **Save/Load**: Save your progress and continue later
 
 ## 🚀 How to Play
@@ -29,6 +30,7 @@ High Wizardy is a text-based RPG with an exciting combat system!
    - **Armor Shop**: Buy armor to reduce damage taken
    - **Combat**: Fight enemies to gain gold and experience (costs 25 energy)
    - **Rest**: Restore 50 health and 50 mana
+   - **View Leaderboard**: See rankings of all players
    - **Save Game**: Save your progress
    - **Exit**: Quit the game
 
@@ -63,5 +65,13 @@ High Wizardy is a text-based RPG with an exciting combat system!
 - **Energy**: Required to initiate combat
 - **Gold**: Currency for buying equipment
 - **Experience**: Gain to level up and become stronger
+
+## 🏆 Leaderboard
+
+The leaderboard tracks all players who have saved their game:
+- Players are ranked by level, then by experience points
+- Top 3 players receive special medals (🥇🥈🥉)
+- Displays player stats including level, experience, gold, and equipped weapon
+- Updates automatically when you save your game
 
 Enjoy your adventure in High Wizardy! 🧙✨
