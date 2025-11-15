@@ -71,18 +71,20 @@ High Wizardy is a text-based RPG with an exciting combat system!
 
 ### Combat Stats
 - **Strength (STR)**: Increases attack damage by +3 per point
-- **Agility (AGI)**: Reserved for future features (dodge chance)
+- **Agility (AGI)**: Increases dodge chance by +2% per point (capped at 50%)
 - **Vitality (VIT)**: Increases defense by +2 per point
 
 ## 💪 Training Gym
 
 Visit the gym to train your combat stats:
 - **Train Strength**: 50 gold for +1 STR (adds +3 damage)
-- **Train Agility**: 50 gold for +1 AGI
+- **Train Agility**: 50 gold for +1 AGI (adds +2% dodge chance)
 - **Train Vitality**: 50 gold for +1 VIT (adds +2 defense)
 - **Intensive Training**: 200 gold for +2 to all stats
 
 Combat stats stack with weapon damage and armor defense, making training a valuable investment!
+
+**Dodge Mechanics**: When enemies attack, agility gives you a chance to completely avoid damage. Each point of agility provides 2% dodge chance, capped at 50% (25 AGI).
 
 ## 🏆 Leaderboard
 

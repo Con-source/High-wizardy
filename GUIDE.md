@@ -65,6 +65,7 @@ During combat you can:
 - Start by buying basic equipment (Wooden Sword + Leather Armor)
 - Train at the gym to boost your combat stats early on
 - Strength is great for dealing more damage in combat
+- Agility helps you dodge attacks and survive longer
 - Vitality helps you survive longer by increasing defense
 - Rest after combat to restore health and mana
 - Save frequently to preserve your progress
@@ -73,6 +74,7 @@ During combat you can:
 - Magical weapons deal more damage but require mana
 - Check the leaderboard to see how you rank against other players!
 - Balance equipment purchases with training investments
+- High agility (15+) makes you very evasive in combat
 
 ## 📊 Leveling System
 
@@ -94,8 +96,10 @@ Combat stats enhance your combat effectiveness:
 - Example: 10 STR = +30 damage bonus
 
 ### Agility (AGI)
-- Currently trains for future features
-- Planned: dodge chance, critical hits
+- Provides dodge chance: **+2% per point**
+- Allows you to completely avoid incoming attacks
+- Maximum dodge chance: **50% (at 25 AGI)**
+- Example: 10 AGI = 20% chance to dodge attacks
 
 ### Vitality (VIT)
 - Increases defense by **+2 per point**
@@ -146,9 +150,12 @@ Combat stats enhance your combat effectiveness:
 
 ### Combat Optimization
 - **For Glass Cannon**: Focus on Strength + powerful weapons
+- **For Evasive Fighter**: Focus on Agility + moderate weapons (30%+ dodge is very effective)
 - **For Tank**: Focus on Vitality + heavy armor
 - **Balanced Build**: Distribute points evenly across all stats
 - Strength scales best with high-damage weapons
+- Agility is most valuable at 15-25 points (30-50% dodge)
 - Vitality becomes more valuable against stronger enemies
+- Combining moderate Agility (10-15) with high Vitality creates a very durable character
 
 Enjoy your adventure in High Wizardy! 🧙✨

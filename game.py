@@ -111,14 +111,25 @@ class Player:
         """Restore mana"""
         self.mana = min(self.max_mana, self.mana + amount)
     
-    def take_damage(self, damage: int) -> int:
-        """Take damage, reduced by armor and vitality"""
+    def check_dodge(self) -> bool:
+        """Check if player dodges an attack based on agility"""
+        import random
+        # Each agility point gives 2% dodge chance, capped at 50%
+        dodge_chance = min(self.agility * 2, 50)
+        return random.randint(1, 100) <= dodge_chance
+    
+    def take_damage(self, damage: int) -> tuple[int, bool]:
+        """Take damage, reduced by armor and vitality. Returns (actual_damage, dodged)"""
+        # Check for dodge first
+        if self.check_dodge():
+            return (0, True)
+        
         defense = self.armor.defense if self.armor else 0
         vitality_defense = self.vitality * 2  # Each vitality point adds 2 defense
         total_defense = defense + vitality_defense
         actual_damage = max(1, damage - total_defense)
         self.health = max(0, self.health - actual_damage)
-        return actual_damage
+        return (actual_damage, False)
     
     def attack_damage(self) -> int:
         """Calculate attack damage with strength bonus"""
@@ -401,8 +412,11 @@ class Game:
             
             # Enemy attacks
             damage = enemy.damage
-            actual_damage = self.player.take_damage(damage)
-            print(f"\n💢 {enemy.name} attacks you for {actual_damage} damage!")
+            actual_damage, dodged = self.player.take_damage(damage)
+            if dodged:
+                print(f"\n💨 You dodged {enemy.name}'s attack!")
+            else:
+                print(f"\n💢 {enemy.name} attacks you for {actual_damage} damage!")
             
             # Check if player is defeated
             if self.player.health <= 0:
@@ -424,7 +438,8 @@ class Game:
             print(f"Your gold: {self.player.gold}")
             print(f"\nCurrent Combat Stats:")
             print(f"  Strength: {self.player.strength} (+{self.player.strength * 3} damage)")
-            print(f"  Agility: {self.player.agility} (Future: dodge chance)")
+            dodge_chance = min(self.player.agility * 2, 50)
+            print(f"  Agility: {self.player.agility} ({dodge_chance}% dodge chance)")
             print(f"  Vitality: {self.player.vitality} (+{self.player.vitality * 2} defense)")
             
             print("\n--- Training Options ---")
