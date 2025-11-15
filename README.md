@@ -7,6 +7,8 @@ High Wizardy is a text-based RPG with an exciting combat system!
 
 ### Features:
 - **Combat System**: Engage in turn-based combat with various enemies
+- **Combat Stats**: Train strength, agility, and vitality at the gym to become stronger
+- **Training Gym**: Improve your combat stats by spending gold on training
 - **Energy System**: 100 max energy that regenerates 5 points every 15 minutes
 - **Combat Costs**: Each combat encounter costs 25 energy
 - **Weapon Shop**: Buy and equip powerful weapons with various stats
@@ -30,6 +32,7 @@ High Wizardy is a text-based RPG with an exciting combat system!
    - **Armor Shop**: Buy armor to reduce damage taken
    - **Combat**: Fight enemies to gain gold and experience (costs 25 energy)
    - **Rest**: Restore 50 health and 50 mana
+   - **Training Gym**: Train combat stats (strength, agility, vitality) for gold
    - **View Leaderboard**: See rankings of all players
    - **Save Game**: Save your progress
    - **Exit**: Quit the game
@@ -63,8 +66,23 @@ High Wizardy is a text-based RPG with an exciting combat system!
 - **Health**: Your life points
 - **Mana**: Used for magical attacks
 - **Energy**: Required to initiate combat
-- **Gold**: Currency for buying equipment
+- **Gold**: Currency for buying equipment and training
 - **Experience**: Gain to level up and become stronger
+
+### Combat Stats
+- **Strength (STR)**: Increases attack damage by +3 per point
+- **Agility (AGI)**: Reserved for future features (dodge chance)
+- **Vitality (VIT)**: Increases defense by +2 per point
+
+## 💪 Training Gym
+
+Visit the gym to train your combat stats:
+- **Train Strength**: 50 gold for +1 STR (adds +3 damage)
+- **Train Agility**: 50 gold for +1 AGI
+- **Train Vitality**: 50 gold for +1 VIT (adds +2 defense)
+- **Intensive Training**: 200 gold for +2 to all stats
+
+Combat stats stack with weapon damage and armor defense, making training a valuable investment!
 
 ## 🏆 Leaderboard
 

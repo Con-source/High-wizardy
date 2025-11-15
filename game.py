@@ -68,6 +68,10 @@ class Player:
         self.last_energy_update = datetime.now()
         self.experience = 0
         self.level = 1
+        # Combat stats
+        self.strength = 0
+        self.agility = 0
+        self.vitality = 0
     
     def update_energy(self):
         """Regenerate energy: 5 energy every 15 minutes"""
@@ -108,17 +112,20 @@ class Player:
         self.mana = min(self.max_mana, self.mana + amount)
     
     def take_damage(self, damage: int) -> int:
-        """Take damage, reduced by armor"""
+        """Take damage, reduced by armor and vitality"""
         defense = self.armor.defense if self.armor else 0
-        actual_damage = max(1, damage - defense)
+        vitality_defense = self.vitality * 2  # Each vitality point adds 2 defense
+        total_defense = defense + vitality_defense
+        actual_damage = max(1, damage - total_defense)
         self.health = max(0, self.health - actual_damage)
         return actual_damage
     
     def attack_damage(self) -> int:
-        """Calculate attack damage"""
+        """Calculate attack damage with strength bonus"""
         base_damage = 10
         weapon_damage = self.weapon.damage if self.weapon else 0
-        return base_damage + weapon_damage
+        strength_bonus = self.strength * 3  # Each strength point adds 3 damage
+        return base_damage + weapon_damage + strength_bonus
     
     def equip_weapon(self, weapon: Weapon):
         """Equip a weapon"""
@@ -162,7 +169,10 @@ class Player:
             'armor': self.armor.to_dict() if self.armor else None,
             'last_energy_update': self.last_energy_update.isoformat(),
             'experience': self.experience,
-            'level': self.level
+            'level': self.level,
+            'strength': self.strength,
+            'agility': self.agility,
+            'vitality': self.vitality
         }
 
 
@@ -236,6 +246,9 @@ class Game:
             print(f"🛡️  Armor: {self.player.armor.name} (Defense: {self.player.armor.defense})")
         else:
             print("🛡️  Armor: None")
+        
+        # Display combat stats
+        print(f"💪 Combat Stats - STR: {self.player.strength} | AGI: {self.player.agility} | VIT: {self.player.vitality}")
         print("="*50)
     
     def weapon_shop(self):
@@ -404,6 +417,61 @@ class Game:
         self.player.restore_mana(50)
         print(f"✅ Restored 50 health and 50 mana!")
     
+    def gym(self):
+        """Gym for training combat stats"""
+        while True:
+            print("\n💪 TRAINING GYM 💪")
+            print(f"Your gold: {self.player.gold}")
+            print(f"\nCurrent Combat Stats:")
+            print(f"  Strength: {self.player.strength} (+{self.player.strength * 3} damage)")
+            print(f"  Agility: {self.player.agility} (Future: dodge chance)")
+            print(f"  Vitality: {self.player.vitality} (+{self.player.vitality * 2} defense)")
+            
+            print("\n--- Training Options ---")
+            print("1. Train Strength (50 gold, +1 STR)")
+            print("2. Train Agility (50 gold, +1 AGI)")
+            print("3. Train Vitality (50 gold, +1 VIT)")
+            print("4. Intensive Training (200 gold, +2 to all stats)")
+            print("0. Back to main menu")
+            
+            choice = input("\nWhat would you like to train? ").strip()
+            
+            if choice == "0":
+                break
+            elif choice == "1":
+                if self.player.gold >= 50:
+                    self.player.gold -= 50
+                    self.player.strength += 1
+                    print(f"\n💪 Strength training complete! STR: {self.player.strength}")
+                else:
+                    print("\n❌ Not enough gold! Need 50 gold.")
+            elif choice == "2":
+                if self.player.gold >= 50:
+                    self.player.gold -= 50
+                    self.player.agility += 1
+                    print(f"\n🏃 Agility training complete! AGI: {self.player.agility}")
+                else:
+                    print("\n❌ Not enough gold! Need 50 gold.")
+            elif choice == "3":
+                if self.player.gold >= 50:
+                    self.player.gold -= 50
+                    self.player.vitality += 1
+                    print(f"\n🛡️  Vitality training complete! VIT: {self.player.vitality}")
+                else:
+                    print("\n❌ Not enough gold! Need 50 gold.")
+            elif choice == "4":
+                if self.player.gold >= 200:
+                    self.player.gold -= 200
+                    self.player.strength += 2
+                    self.player.agility += 2
+                    self.player.vitality += 2
+                    print(f"\n🌟 Intensive training complete!")
+                    print(f"STR: {self.player.strength}, AGI: {self.player.agility}, VIT: {self.player.vitality}")
+                else:
+                    print("\n❌ Not enough gold! Need 200 gold.")
+            else:
+                print("\n❌ Invalid choice!")
+    
     def save_game(self):
         """Save game to file"""
         try:
@@ -432,6 +500,11 @@ class Game:
             self.player.experience = data['experience']
             self.player.level = data['level']
             self.player.last_energy_update = datetime.fromisoformat(data['last_energy_update'])
+            
+            # Load combat stats (with defaults for older save files)
+            self.player.strength = data.get('strength', 0)
+            self.player.agility = data.get('agility', 0)
+            self.player.vitality = data.get('vitality', 0)
             
             if data['weapon']:
                 w = data['weapon']
@@ -561,9 +634,10 @@ class Game:
             print("2. Armor Shop")
             print("3. Combat (Costs 25 Energy)")
             print("4. Rest")
-            print("5. View Leaderboard")
-            print("6. Save Game")
-            print("7. Exit")
+            print("5. Training Gym")
+            print("6. View Leaderboard")
+            print("7. Save Game")
+            print("8. Exit")
             
             choice = input("\nWhat would you like to do? ").strip()
             
@@ -576,10 +650,12 @@ class Game:
             elif choice == "4":
                 self.rest()
             elif choice == "5":
-                self.display_leaderboard()
+                self.gym()
             elif choice == "6":
-                self.save_game()
+                self.display_leaderboard()
             elif choice == "7":
+                self.save_game()
+            elif choice == "8":
                 print("\n👋 Thanks for playing High Wizardy!")
                 save = input("Save game before exit? (y/n): ").strip().lower()
                 if save == 'y':
