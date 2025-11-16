@@ -86,9 +86,9 @@ class Property:
         self.listed_for_rent = False
     
     def get_price_in_gold(self) -> int:
-        """Convert shillings and pennies to gold (1 shilling = 12 pennies, 20 shillings = 1 gold)"""
-        total_pennies = (self.price_shillings * 12) + self.price_pennies
-        return total_pennies  # Simplified: using pennies as gold equivalent for game balance
+        """Convert shillings and pennies to gold - simplified for game balance"""
+        # Simplified conversion: use shillings as approximate gold value
+        return self.price_shillings + (self.price_pennies // 2)
     
     def add_upgrade(self, upgrade: PropertyUpgrade) -> bool:
         """Add an upgrade if there's room"""
