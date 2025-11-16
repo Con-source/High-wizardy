@@ -48,8 +48,10 @@ python3 game.py
 2. **Armor Shop** - Browse and purchase armor
 3. **Combat** - Fight enemies (requires 25 energy)
 4. **Rest** - Restore 50 health and 50 mana
-5. **Save Game** - Save your progress
-6. **Exit** - Quit the game (option to save)
+5. **Training Gym** - Train combat stats for gold
+6. **View Leaderboard** - See rankings of all players
+7. **Save Game** - Save your progress
+8. **Exit** - Quit the game (option to save)
 
 ## ⚔️ Combat Actions
 
@@ -61,11 +63,18 @@ During combat you can:
 ## 💡 Tips
 
 - Start by buying basic equipment (Wooden Sword + Leather Armor)
+- Train at the gym to boost your combat stats early on
+- Strength is great for dealing more damage in combat
+- Agility helps you dodge attacks and survive longer
+- Vitality helps you survive longer by increasing defense
 - Rest after combat to restore health and mana
 - Save frequently to preserve your progress
 - Energy regenerates automatically, so don't worry if you run out
 - Level up by gaining experience in combat
 - Magical weapons deal more damage but require mana
+- Check the leaderboard to see how you rank against other players!
+- Balance equipment purchases with training investments
+- High agility (15+) makes you very evasive in combat
 
 ## 📊 Leveling System
 
@@ -77,27 +86,76 @@ During combat you can:
   - Max Energy (+10)
 - All stats are fully restored on level up
 
+## 💪 Combat Stats System
+
+Combat stats enhance your combat effectiveness:
+
+### Strength (STR)
+- Increases attack damage by **+3 per point**
+- Stacks with weapon damage
+- Example: 10 STR = +30 damage bonus
+
+### Agility (AGI)
+- Provides dodge chance: **+2% per point**
+- Allows you to completely avoid incoming attacks
+- Maximum dodge chance: **50% (at 25 AGI)**
+- Example: 10 AGI = 20% chance to dodge attacks
+
+### Vitality (VIT)
+- Increases defense by **+2 per point**
+- Stacks with armor defense
+- Example: 10 VIT = +20 defense bonus
+
+### Training Costs
+- Individual stat training: **50 gold** for +1 stat
+- Intensive training: **200 gold** for +2 to all stats
+- Train at the gym between missions to maximize power
+
 ## 💾 Save/Load System
 
 - Game automatically saves to `savegame.json`
 - Load your saved game from the main menu
 - Save before exiting to preserve progress
+- Your stats are automatically added to the leaderboard when you save
+
+## 🏆 Leaderboard System
+
+- All saved players appear on the leaderboard
+- Rankings are based on level first, then experience points
+- Top 3 players get special medal icons (🥇 Gold, 🥈 Silver, 🥉 Bronze)
+- Displays key stats: Level, Experience, Gold, and equipped Weapon
+- Updates automatically every time you save your game
+- Compete with friends to reach the top of the leaderboard!
 
 ## 🎯 Strategy Guide
 
 ### Early Game
 - Buy Wooden Sword (50g) and Leather Armor (60g)
+- Train 1-2 points in Strength for extra damage
 - Fight easier enemies (Goblins) to gain gold and XP
 - Upgrade to Iron equipment when you have ~350g
 
 ### Mid Game
 - Get Steel equipment for better stats
+- Balance training stats with equipment upgrades
+- Train Vitality to survive tougher enemies
 - Fight stronger enemies (Orcs, Dark Mages)
 - Consider magical weapons if you like spell combat
 
 ### Late Game
 - Save for legendary equipment
+- Max out combat stats (aim for 10+ in each)
 - Challenge Dragons for big rewards
 - Max out your character's level and equipment
+
+### Combat Optimization
+- **For Glass Cannon**: Focus on Strength + powerful weapons
+- **For Evasive Fighter**: Focus on Agility + moderate weapons (30%+ dodge is very effective)
+- **For Tank**: Focus on Vitality + heavy armor
+- **Balanced Build**: Distribute points evenly across all stats
+- Strength scales best with high-damage weapons
+- Agility is most valuable at 15-25 points (30-50% dodge)
+- Vitality becomes more valuable against stronger enemies
+- Combining moderate Agility (10-15) with high Vitality creates a very durable character
 
 Enjoy your adventure in High Wizardy! 🧙✨

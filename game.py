@@ -68,6 +68,10 @@ class Player:
         self.last_energy_update = datetime.now()
         self.experience = 0
         self.level = 1
+        # Combat stats
+        self.strength = 0
+        self.agility = 0
+        self.vitality = 0
     
     def update_energy(self):
         """Regenerate energy: 5 energy every 15 minutes"""
@@ -107,18 +111,32 @@ class Player:
         """Restore mana"""
         self.mana = min(self.max_mana, self.mana + amount)
     
-    def take_damage(self, damage: int) -> int:
-        """Take damage, reduced by armor"""
+    def check_dodge(self) -> bool:
+        """Check if player dodges an attack based on agility"""
+        import random
+        # Each agility point gives 2% dodge chance, capped at 50%
+        dodge_chance = min(self.agility * 2, 50)
+        return random.randint(1, 100) <= dodge_chance
+    
+    def take_damage(self, damage: int) -> tuple[int, bool]:
+        """Take damage, reduced by armor and vitality. Returns (actual_damage, dodged)"""
+        # Check for dodge first
+        if self.check_dodge():
+            return (0, True)
+        
         defense = self.armor.defense if self.armor else 0
-        actual_damage = max(1, damage - defense)
+        vitality_defense = self.vitality * 2  # Each vitality point adds 2 defense
+        total_defense = defense + vitality_defense
+        actual_damage = max(1, damage - total_defense)
         self.health = max(0, self.health - actual_damage)
-        return actual_damage
+        return (actual_damage, False)
     
     def attack_damage(self) -> int:
-        """Calculate attack damage"""
+        """Calculate attack damage with strength bonus"""
         base_damage = 10
         weapon_damage = self.weapon.damage if self.weapon else 0
-        return base_damage + weapon_damage
+        strength_bonus = self.strength * 3  # Each strength point adds 3 damage
+        return base_damage + weapon_damage + strength_bonus
     
     def equip_weapon(self, weapon: Weapon):
         """Equip a weapon"""
@@ -162,7 +180,10 @@ class Player:
             'armor': self.armor.to_dict() if self.armor else None,
             'last_energy_update': self.last_energy_update.isoformat(),
             'experience': self.experience,
-            'level': self.level
+            'level': self.level,
+            'strength': self.strength,
+            'agility': self.agility,
+            'vitality': self.vitality
         }
 
 
@@ -211,6 +232,7 @@ class Game:
         self.player = Player()
         self.shop = Shop()
         self.save_file = "savegame.json"
+        self.leaderboard_file = "leaderboard.json"
     
     def display_status(self):
         """Display player status"""
@@ -235,6 +257,9 @@ class Game:
             print(f"🛡️  Armor: {self.player.armor.name} (Defense: {self.player.armor.defense})")
         else:
             print("🛡️  Armor: None")
+        
+        # Display combat stats
+        print(f"💪 Combat Stats - STR: {self.player.strength} | AGI: {self.player.agility} | VIT: {self.player.vitality}")
         print("="*50)
     
     def weapon_shop(self):
@@ -387,8 +412,11 @@ class Game:
             
             # Enemy attacks
             damage = enemy.damage
-            actual_damage = self.player.take_damage(damage)
-            print(f"\n💢 {enemy.name} attacks you for {actual_damage} damage!")
+            actual_damage, dodged = self.player.take_damage(damage)
+            if dodged:
+                print(f"\n💨 You dodged {enemy.name}'s attack!")
+            else:
+                print(f"\n💢 {enemy.name} attacks you for {actual_damage} damage!")
             
             # Check if player is defeated
             if self.player.health <= 0:
@@ -403,12 +431,70 @@ class Game:
         self.player.restore_mana(50)
         print(f"✅ Restored 50 health and 50 mana!")
     
+    def gym(self):
+        """Gym for training combat stats"""
+        while True:
+            print("\n💪 TRAINING GYM 💪")
+            print(f"Your gold: {self.player.gold}")
+            print(f"\nCurrent Combat Stats:")
+            print(f"  Strength: {self.player.strength} (+{self.player.strength * 3} damage)")
+            dodge_chance = min(self.player.agility * 2, 50)
+            print(f"  Agility: {self.player.agility} ({dodge_chance}% dodge chance)")
+            print(f"  Vitality: {self.player.vitality} (+{self.player.vitality * 2} defense)")
+            
+            print("\n--- Training Options ---")
+            print("1. Train Strength (50 gold, +1 STR)")
+            print("2. Train Agility (50 gold, +1 AGI)")
+            print("3. Train Vitality (50 gold, +1 VIT)")
+            print("4. Intensive Training (200 gold, +2 to all stats)")
+            print("0. Back to main menu")
+            
+            choice = input("\nWhat would you like to train? ").strip()
+            
+            if choice == "0":
+                break
+            elif choice == "1":
+                if self.player.gold >= 50:
+                    self.player.gold -= 50
+                    self.player.strength += 1
+                    print(f"\n💪 Strength training complete! STR: {self.player.strength}")
+                else:
+                    print("\n❌ Not enough gold! Need 50 gold.")
+            elif choice == "2":
+                if self.player.gold >= 50:
+                    self.player.gold -= 50
+                    self.player.agility += 1
+                    print(f"\n🏃 Agility training complete! AGI: {self.player.agility}")
+                else:
+                    print("\n❌ Not enough gold! Need 50 gold.")
+            elif choice == "3":
+                if self.player.gold >= 50:
+                    self.player.gold -= 50
+                    self.player.vitality += 1
+                    print(f"\n🛡️  Vitality training complete! VIT: {self.player.vitality}")
+                else:
+                    print("\n❌ Not enough gold! Need 50 gold.")
+            elif choice == "4":
+                if self.player.gold >= 200:
+                    self.player.gold -= 200
+                    self.player.strength += 2
+                    self.player.agility += 2
+                    self.player.vitality += 2
+                    print(f"\n🌟 Intensive training complete!")
+                    print(f"STR: {self.player.strength}, AGI: {self.player.agility}, VIT: {self.player.vitality}")
+                else:
+                    print("\n❌ Not enough gold! Need 200 gold.")
+            else:
+                print("\n❌ Invalid choice!")
+    
     def save_game(self):
         """Save game to file"""
         try:
             with open(self.save_file, 'w') as f:
                 json.dump(self.player.to_dict(), f, indent=2)
             print("\n💾 Game saved successfully!")
+            # Update leaderboard
+            self.update_leaderboard()
         except Exception as e:
             print(f"\n❌ Failed to save game: {e}")
     
@@ -430,6 +516,11 @@ class Game:
             self.player.level = data['level']
             self.player.last_energy_update = datetime.fromisoformat(data['last_energy_update'])
             
+            # Load combat stats (with defaults for older save files)
+            self.player.strength = data.get('strength', 0)
+            self.player.agility = data.get('agility', 0)
+            self.player.vitality = data.get('vitality', 0)
+            
             if data['weapon']:
                 w = data['weapon']
                 self.player.weapon = Weapon(w['name'], w['description'], w['price'], w['damage'], w.get('mana_cost', 0))
@@ -446,6 +537,76 @@ class Game:
         except Exception as e:
             print(f"\n❌ Failed to load game: {e}")
             return False
+    
+    def update_leaderboard(self):
+        """Update leaderboard with current player stats"""
+        try:
+            # Load existing leaderboard
+            leaderboard = []
+            try:
+                with open(self.leaderboard_file, 'r') as f:
+                    leaderboard = json.load(f)
+            except FileNotFoundError:
+                pass
+            
+            # Create player entry
+            player_entry = {
+                'name': self.player.name,
+                'level': self.player.level,
+                'experience': self.player.experience,
+                'gold': self.player.gold,
+                'max_health': self.player.max_health,
+                'weapon': self.player.weapon.name if self.player.weapon else "None",
+                'armor': self.player.armor.name if self.player.armor else "None"
+            }
+            
+            # Update or add player to leaderboard
+            updated = False
+            for i, entry in enumerate(leaderboard):
+                if entry['name'] == self.player.name:
+                    leaderboard[i] = player_entry
+                    updated = True
+                    break
+            
+            if not updated:
+                leaderboard.append(player_entry)
+            
+            # Save updated leaderboard
+            with open(self.leaderboard_file, 'w') as f:
+                json.dump(leaderboard, f, indent=2)
+                
+        except Exception as e:
+            print(f"\n⚠️  Failed to update leaderboard: {e}")
+    
+    def display_leaderboard(self):
+        """Display the leaderboard"""
+        try:
+            with open(self.leaderboard_file, 'r') as f:
+                leaderboard = json.load(f)
+            
+            if not leaderboard:
+                print("\n📊 Leaderboard is empty!")
+                return
+            
+            # Sort by level (descending), then by experience (descending)
+            leaderboard.sort(key=lambda x: (x['level'], x['experience']), reverse=True)
+            
+            print("\n" + "="*70)
+            print("🏆 LEADERBOARD 🏆".center(70))
+            print("="*70)
+            print(f"{'Rank':<6} {'Name':<15} {'Level':<7} {'Exp':<10} {'Gold':<10} {'Weapon':<15}")
+            print("-"*70)
+            
+            for i, entry in enumerate(leaderboard, 1):
+                rank_icon = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
+                print(f"{rank_icon:<6} {entry['name']:<15} {entry['level']:<7} {entry['experience']:<10} {entry['gold']:<10} {entry['weapon']:<15}")
+            
+            print("="*70)
+            
+        except FileNotFoundError:
+            print("\n📊 Leaderboard is empty! Play the game and save to appear on the leaderboard.")
+        except Exception as e:
+            print(f"\n❌ Failed to load leaderboard: {e}")
     
     def main_menu(self):
         """Main game menu"""
@@ -488,8 +649,10 @@ class Game:
             print("2. Armor Shop")
             print("3. Combat (Costs 25 Energy)")
             print("4. Rest")
-            print("5. Save Game")
-            print("6. Exit")
+            print("5. Training Gym")
+            print("6. View Leaderboard")
+            print("7. Save Game")
+            print("8. Exit")
             
             choice = input("\nWhat would you like to do? ").strip()
             
@@ -502,8 +665,12 @@ class Game:
             elif choice == "4":
                 self.rest()
             elif choice == "5":
-                self.save_game()
+                self.gym()
             elif choice == "6":
+                self.display_leaderboard()
+            elif choice == "7":
+                self.save_game()
+            elif choice == "8":
                 print("\n👋 Thanks for playing High Wizardy!")
                 save = input("Save game before exit? (y/n): ").strip().lower()
                 if save == 'y':
