@@ -9,6 +9,8 @@ High Wizardy is a text-based RPG with an exciting combat system!
 - **Combat System**: Engage in turn-based combat with various enemies
 - **Combat Stats**: Train strength, agility, and vitality at the gym to become stronger
 - **Training Gym**: Improve your combat stats by spending gold on training
+- **Property System**: Buy, upgrade, and rent properties to increase happiness
+- **Happiness System**: Property ownership boosts happiness, providing training bonuses
 - **Energy System**: 100 max energy that regenerates 5 points every 15 minutes
 - **Combat Costs**: Each combat encounter costs 25 energy
 - **Weapon Shop**: Buy and equip powerful weapons with various stats
@@ -33,6 +35,7 @@ High Wizardy is a text-based RPG with an exciting combat system!
    - **Combat**: Fight enemies to gain gold and experience (costs 25 energy)
    - **Rest**: Restore 50 health and 50 mana
    - **Training Gym**: Train combat stats (strength, agility, vitality) for gold
+   - **Property Market**: Buy, upgrade, and rent properties to boost happiness
    - **View Leaderboard**: See rankings of all players
    - **Save Game**: Save your progress
    - **Exit**: Quit the game
@@ -85,6 +88,86 @@ Visit the gym to train your combat stats:
 Combat stats stack with weapon damage and armor defense, making training a valuable investment!
 
 **Dodge Mechanics**: When enemies attack, agility gives you a chance to completely avoid damage. Each point of agility provides 2% dodge chance, capped at 50% (25 AGI).
+
+## 🏠 Property System
+
+Invest in properties to increase your happiness and gain training bonuses!
+
+### Property Types
+- **Cottage**: Small, affordable starter homes (50-75s + pennies)
+  - Size: 100-120 sq ft
+  - Max Upgrades: 2
+  - Base Happiness: +10
+  
+- **Manor**: Spacious mid-tier properties (200-250s)
+  - Size: 300-350 sq ft
+  - Max Upgrades: 4
+  - Base Happiness: +25
+  
+- **Castle**: Grand estates for the wealthy (500-1000s)
+  - Size: 800-1200 sq ft
+  - Max Upgrades: 6-8
+  - Base Happiness: +50
+
+### Property Upgrades
+Each property can be upgraded with various improvements:
+
+**Cottage Upgrades:**
+- Small Garden (20g, +5 happiness)
+- Bookshelf (25g, +5 happiness)
+
+**Manor Upgrades:**
+- Library (50g, +10 happiness)
+- Training Room (60g, +10 happiness)
+- Garden (40g, +8 happiness)
+- Workshop (55g, +9 happiness)
+
+**Castle Upgrades:**
+- Grand Library (100g, +15 happiness)
+- Full Gymnasium (120g, +15 happiness)
+- Royal Garden (90g, +12 happiness)
+- Armory (110g, +13 happiness)
+- Chapel (80g, +11 happiness)
+- Observatory (95g, +12 happiness)
+
+### Property Actions
+- **Buy Properties**: Purchase properties from the market
+- **View Properties**: See all your owned properties and their status
+- **Upgrade Properties**: Add improvements to increase happiness
+- **Sell Properties**: Sell properties for 50% of purchase price
+- **List for Rent**: Put properties on the rental market
+- **Rent Properties**: Rent properties from other players
+
+### Currency System
+Properties use shillings (s) and pennies (p):
+- 1 shilling = 12 pennies
+- Prices are simplified to gold for gameplay balance
+
+## 😊 Happiness System
+
+Happiness is gained from owning and upgrading properties!
+
+### Happiness Benefits
+- **Training Bonus**: Happiness boosts stat gains at the gym
+  - 0 happiness = 1.0x training (normal gains)
+  - 50 happiness = 1.25x training 
+  - 100 happiness = 1.5x training (maximum bonus)
+  
+### How to Increase Happiness
+1. **Buy Properties**: Each property provides base happiness
+2. **Upgrade Properties**: Add improvements for additional happiness
+3. **Own Multiple Properties**: Happiness stacks from all properties
+
+### Happiness Bar
+The happiness bar shows visually in your status:
+```
+😊 Happiness: ████████████░░░░░░░░ 60/100 (x1.30 training bonus)
+```
+
+### Example Training with Happiness
+- At 0 happiness: Train Strength (50g) → +1 STR
+- At 100 happiness: Train Strength (50g) → +1 STR (with 1.5x bonus)
+- At 100 happiness: Intensive Training (200g) → +3 to all stats!
 
 ## 🏆 Leaderboard
 
