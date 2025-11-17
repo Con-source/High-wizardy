@@ -161,7 +161,7 @@ During combat you can:
 
 ### Maximizing Gains
 - Max out your happiness first (100/100)
-- With max happiness: Health +15, Mana +7.5, Energy +7.5
+- With max happiness: Health +15, Mana +7, Energy +7
 - Train regularly when you have spare energy
 - Balance your stat improvements based on your playstyle
 
