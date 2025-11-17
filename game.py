@@ -177,14 +177,15 @@ class Player:
             pennies = 0
         elif shillings is None:
             shillings = 0
-        
-        if shillings > 0 and pennies > 0:
+
+        if shillings == 0 and pennies == 0:
+            return "0s 0d"
+        elif shillings > 0 and pennies > 0:
             return f"{shillings}s {pennies}d"
         elif shillings > 0:
             return f"{shillings}s"
         else:
             return f"{pennies}d"
-    
     def update_energy(self):
         """Regenerate energy: 5 energy every 15 minutes"""
         current_time = datetime.now()
