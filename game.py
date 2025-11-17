@@ -850,13 +850,6 @@ class Game:
         print("- Search and filter properties")
         input("\nPress Enter to continue...")
     
-    def rest(self):
-        """Rest to restore health and mana"""
-        print("\n😴 Resting...")
-        self.player.heal(50)
-        self.player.restore_mana(50)
-        print(f"✅ Restored 50 health and 50 mana!")
-    
     def save_game(self):
         """Save game to file"""
         try:
