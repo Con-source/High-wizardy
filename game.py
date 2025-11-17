@@ -880,8 +880,11 @@ class Game:
                 self.player.shillings = data['shillings']
                 self.player.pennies = data['pennies']
             elif 'gold' in data:
-                # Convert old gold to new currency (1 gold = 1 penny)
-                total_pennies = data['gold']
+                # Convert old gold to new currency.
+                # NOTE: The conversion rate below assumes 1 gold = 1 penny.
+                # TODO: Verify this rate against old save files to ensure players do not lose purchasing power.
+                OLD_GOLD_TO_PENNIES = 1  # Adjust this if the old economy used a different rate (e.g., 1 gold = 12 pennies)
+                total_pennies = data['gold'] * OLD_GOLD_TO_PENNIES
                 self.player.shillings = total_pennies // 12
                 self.player.pennies = total_pennies % 12
             
