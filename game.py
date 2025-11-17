@@ -273,6 +273,8 @@ class Player:
     
     def get_happiness_bonus(self) -> float:
         """Get gym stat bonus multiplier based on happiness (1.0 to 1.5)"""
+        if self.max_happiness == 0:
+            return 1.0
         return 1.0 + (self.happiness / self.max_happiness) * 0.5
     
     def train_at_gym(self, stat: str) -> bool:
