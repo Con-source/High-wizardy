@@ -608,17 +608,17 @@ class Game:
                 break
             elif choice == "1":
                 if self.player.train_at_gym("health"):
-                    print("✅ Training complete!")
+                    pass
                 else:
                     print(f"\n❌ Not enough energy! Need 15 energy, have {self.player.energy}")
             elif choice == "2":
                 if self.player.train_at_gym("mana"):
-                    print("✅ Training complete!")
+                    pass
                 else:
                     print(f"\n❌ Not enough energy! Need 15 energy, have {self.player.energy}")
             elif choice == "3":
                 if self.player.train_at_gym("energy"):
-                    print("✅ Training complete!")
+                    pass
                 else:
                     print(f"\n❌ Not enough energy! Need 15 energy, have {self.player.energy}")
             else:
