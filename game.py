@@ -52,61 +52,71 @@ class Armor(Item):
 
 
 class PropertyUpgrade:
-    """Property upgrade that adds happiness"""
-    def __init__(self, name: str, description: str, price: int, happiness_boost: int):
+    """Property upgrade (library, gym, garden, etc.)"""
+    def __init__(self, name: str, description: str, cost: int, happiness_bonus: int):
         self.name = name
         self.description = description
-        self.price = price
-        self.happiness_boost = happiness_boost
+        self.cost = cost
+        self.happiness_bonus = happiness_bonus
     
     def to_dict(self):
         return {
             'name': self.name,
             'description': self.description,
-            'price': self.price,
-            'happiness_boost': self.happiness_boost
+            'cost': self.cost,
+            'happiness_bonus': self.happiness_bonus
         }
 
 
 class Property:
-    """Property that can be owned, upgraded, and traded"""
-    def __init__(self, name: str, description: str, base_price: int):
+    """Property that can be owned by players"""
+    def __init__(self, property_type: str, name: str, description: str, 
+                 price_shillings: int, price_pennies: int, size: int, max_upgrades: int):
+        self.property_type = property_type  # cottage, manor, castle
         self.name = name
         self.description = description
-        self.base_price = base_price
+        self.price_shillings = price_shillings
+        self.price_pennies = price_pennies
+        self.size = size
+        self.max_upgrades = max_upgrades
         self.upgrades: List[PropertyUpgrade] = []
-        self.owner: Optional[str] = None
-        self.for_sale = False
-        self.sale_price = 0
-        self.for_rent = False
-        self.rent_price = 0
-        self.renter: Optional[str] = None
+        self.is_rented = False
+        self.rented_to: Optional[str] = None
+        self.rent_amount = 0
+        self.listed_for_rent = False
     
-    def get_total_happiness(self) -> int:
-        """Calculate total happiness from all upgrades"""
-        return sum(upgrade.happiness_boost for upgrade in self.upgrades)
+    def get_price_in_gold(self) -> int:
+        """Convert shillings and pennies to gold - simplified for game balance"""
+        # Simplified conversion: use shillings as approximate gold value
+        return self.price_shillings + (self.price_pennies // 2)
     
-    def get_total_value(self) -> int:
-        """Calculate total value including upgrades"""
-        upgrade_value = sum(upgrade.price for upgrade in self.upgrades)
-        return self.base_price + upgrade_value
+    def add_upgrade(self, upgrade: PropertyUpgrade) -> bool:
+        """Add an upgrade if there's room"""
+        if len(self.upgrades) < self.max_upgrades:
+            self.upgrades.append(upgrade)
+            return True
+        return False
     
-    def add_upgrade(self, upgrade: PropertyUpgrade):
-        """Add an upgrade to the property"""
-        self.upgrades.append(upgrade)
+    def calculate_happiness_bonus(self) -> int:
+        """Calculate total happiness from this property and its upgrades"""
+        base_happiness = {'cottage': 10, 'manor': 25, 'castle': 50}.get(self.property_type, 0)
+        upgrade_happiness = sum(u.happiness_bonus for u in self.upgrades)
+        return base_happiness + upgrade_happiness
     
     def to_dict(self):
         return {
+            'property_type': self.property_type,
             'name': self.name,
             'description': self.description,
-            'base_price': self.base_price,
+            'price_shillings': self.price_shillings,
+            'price_pennies': self.price_pennies,
+            'size': self.size,
+            'max_upgrades': self.max_upgrades,
             'upgrades': [u.to_dict() for u in self.upgrades],
-            'owner': self.owner,
-            'for_sale': self.for_sale,
-            'sale_price': self.sale_price,
-            'for_rent': self.for_rent,
-            'rent_price': self.rent_price,
-            'renter': self.renter
+            'is_rented': self.is_rented,
+            'rented_to': self.rented_to,
+            'rent_amount': self.rent_amount,
+            'listed_for_rent': self.listed_for_rent
         }
 
 
@@ -129,21 +139,14 @@ class Player:
         self.last_energy_update = datetime.now()
         self.experience = 0
         self.level = 1
-        # Property and happiness system
-        self.properties: List['Property'] = []
+        # Combat stats
+        self.strength = 0
+        self.agility = 0
+        self.vitality = 0
+        # Property system
+        self.properties: List[Property] = []
         self.happiness = 0
         self.max_happiness = 100
-    
-    def add_currency(self, shillings: int = 0, pennies: int = 0):
-        """Add currency and handle conversion (12 pennies = 1 shilling)"""
-        self.pennies += pennies
-        self.shillings += shillings
-        
-        # Convert excess pennies to shillings
-        if self.pennies >= 12:
-            extra_shillings = self.pennies // 12
-            self.shillings += extra_shillings
-            self.pennies = self.pennies % 12
     
     def remove_currency(self, shillings: int = 0, pennies: int = 0) -> bool:
         """Remove currency if available, return True if successful"""
@@ -224,18 +227,49 @@ class Player:
         """Restore mana"""
         self.mana = min(self.max_mana, self.mana + amount)
     
-    def take_damage(self, damage: int) -> int:
-        """Take damage, reduced by armor"""
+    def calculate_happiness(self):
+        """Calculate happiness based on owned properties and upgrades"""
+        total_happiness = sum(prop.calculate_happiness_bonus() for prop in self.properties)
+        self.happiness = min(total_happiness, self.max_happiness)
+        return self.happiness
+    
+    def get_happiness_multiplier(self) -> float:
+        """Get stat gain multiplier based on happiness (1.0 to 1.5x)"""
+        self.calculate_happiness()
+        # At max happiness (100), get 50% bonus
+        return 1.0 + (self.happiness / 200.0)
+    
+    def add_property(self, property: Property):
+        """Add a property to player's collection"""
+        self.properties.append(property)
+        self.calculate_happiness()
+    
+    def check_dodge(self) -> bool:
+        """Check if player dodges an attack based on agility"""
+        import random
+        # Each agility point gives 2% dodge chance, capped at 50%
+        dodge_chance = min(self.agility * 2, 50)
+        return random.randint(1, 100) <= dodge_chance
+    
+    def take_damage(self, damage: int) -> tuple[int, bool]:
+        """Take damage, reduced by armor and vitality. Returns (actual_damage, dodged)"""
+        # Check for dodge first
+        if self.check_dodge():
+            return (0, True)
+        
         defense = self.armor.defense if self.armor else 0
-        actual_damage = max(1, damage - defense)
+        vitality_defense = self.vitality * 2  # Each vitality point adds 2 defense
+        total_defense = defense + vitality_defense
+        actual_damage = max(1, damage - total_defense)
         self.health = max(0, self.health - actual_damage)
-        return actual_damage
+        return (actual_damage, False)
     
     def attack_damage(self) -> int:
-        """Calculate attack damage"""
+        """Calculate attack damage with strength bonus"""
         base_damage = 10
         weapon_damage = self.weapon.damage if self.weapon else 0
-        return base_damage + weapon_damage
+        strength_bonus = self.strength * 3  # Each strength point adds 3 damage
+        return base_damage + weapon_damage + strength_bonus
     
     def equip_weapon(self, weapon: Weapon):
         """Equip a weapon"""
@@ -317,9 +351,12 @@ class Player:
             'last_energy_update': self.last_energy_update.isoformat(),
             'experience': self.experience,
             'level': self.level,
+            'strength': self.strength,
+            'agility': self.agility,
+            'vitality': self.vitality,
+            'properties': [p.to_dict() for p in self.properties],
             'happiness': self.happiness,
-            'max_happiness': self.max_happiness,
-            'properties': [prop.to_dict() for prop in self.properties]
+            'max_happiness': self.max_happiness
         }
 
 
@@ -362,12 +399,48 @@ class Shop:
         ]
 
 
+class PropertyMarket:
+    """Market for buying and renting properties"""
+    def __init__(self):
+        self.available_properties = [
+            Property("cottage", "Cozy Cottage", "A small but comfortable dwelling", 50, 0, 100, 2),
+            Property("cottage", "Village Cottage", "A charming cottage in the village", 75, 6, 120, 2),
+            Property("manor", "Stone Manor", "A sturdy stone manor with multiple rooms", 200, 0, 300, 4),
+            Property("manor", "Lakeside Manor", "A beautiful manor by the lake", 250, 0, 350, 4),
+            Property("castle", "Small Castle", "A modest castle with defensive walls", 500, 0, 800, 6),
+            Property("castle", "Grand Castle", "A magnificent castle fit for nobility", 1000, 0, 1200, 8),
+        ]
+        self.available_upgrades = {
+            'cottage': [
+                PropertyUpgrade("Small Garden", "A pleasant garden for relaxation", 20, 5),
+                PropertyUpgrade("Bookshelf", "A cozy reading corner", 25, 5),
+            ],
+            'manor': [
+                PropertyUpgrade("Library", "An extensive collection of books", 50, 10),
+                PropertyUpgrade("Training Room", "Basic workout equipment", 60, 10),
+                PropertyUpgrade("Garden", "A well-maintained garden", 40, 8),
+                PropertyUpgrade("Workshop", "A place for crafts and hobbies", 55, 9),
+            ],
+            'castle': [
+                PropertyUpgrade("Grand Library", "A magnificent library with rare books", 100, 15),
+                PropertyUpgrade("Full Gymnasium", "Complete training facilities", 120, 15),
+                PropertyUpgrade("Royal Garden", "Sprawling gardens with exotic plants", 90, 12),
+                PropertyUpgrade("Armory", "A well-stocked armory", 110, 13),
+                PropertyUpgrade("Chapel", "A peaceful place for meditation", 80, 11),
+                PropertyUpgrade("Observatory", "For studying the stars", 95, 12),
+            ]
+        }
+        self.rental_listings: List[Dict] = []
+
+
 class Game:
     """Main game class"""
     def __init__(self):
         self.player = Player()
         self.shop = Shop()
+        self.property_market = PropertyMarket()
         self.save_file = "savegame.json"
+        self.leaderboard_file = "leaderboard.json"
     
     def display_status(self):
         """Display player status"""
@@ -394,10 +467,25 @@ class Game:
         else:
             print("🛡️  Armor: None")
         
+        # Display combat stats
+        print(f"💪 Combat Stats - STR: {self.player.strength} | AGI: {self.player.agility} | VIT: {self.player.vitality}")
+        
+        # Display happiness bar
+        self.player.calculate_happiness()
+        happiness_bar = self.create_bar(self.player.happiness, self.player.max_happiness, 20)
+        multiplier = self.player.get_happiness_multiplier()
+        print(f"😊 Happiness: {happiness_bar} {self.player.happiness}/{self.player.max_happiness} (x{multiplier:.2f} training bonus)")
+        
+        # Display properties count
         if self.player.properties:
-            print(f"🏠 Properties: {len(self.player.properties)}")
+            print(f"🏠 Properties: {len(self.player.properties)} owned")
         
         print("="*50)
+    
+    def create_bar(self, current: int, maximum: int, length: int) -> str:
+        """Create a visual progress bar"""
+        filled = int((current / maximum) * length) if maximum > 0 else 0
+        return "█" * filled + "░" * (length - filled)
     
     def weapon_shop(self):
         """Weapon shop menu"""
@@ -574,8 +662,11 @@ class Game:
             
             # Enemy attacks
             damage = enemy.damage
-            actual_damage = self.player.take_damage(damage)
-            print(f"\n💢 {enemy.name} attacks you for {actual_damage} damage!")
+            actual_damage, dodged = self.player.take_damage(damage)
+            if dodged:
+                print(f"\n💨 You dodged {enemy.name}'s attack!")
+            else:
+                print(f"\n💢 {enemy.name} attacks you for {actual_damage} damage!")
             
             # Check if player is defeated
             if self.player.health <= 0:
@@ -590,267 +681,402 @@ class Game:
         self.player.restore_mana(50)
         print(f"✅ Restored 50 health and 50 mana!")
     
-    def gym_menu(self):
-        """Gym menu for training stats"""
+    def gym(self):
+        """Gym for training combat stats"""
         while True:
-            print("\n💪 GYM TRAINING 💪")
-            print(f"Your energy: {self.player.energy}/{self.player.max_energy}")
-            print(f"Happiness Bonus: {self.player.get_happiness_bonus():.2f}x")
-            print("\nTraining Options (Costs 15 Energy):")
-            print("1. Health Training (+10 Max Health per session)")
-            print("2. Mana Training (+5 Max Mana per session)")
-            print("3. Energy Training (+5 Max Energy per session)")
-            print("\n0. Back to main menu")
+            print("\n💪 TRAINING GYM 💪")
+            print(f"Your gold: {self.player.gold}")
+            multiplier = self.player.get_happiness_multiplier()
+            print(f"😊 Happiness Bonus: x{multiplier:.2f} stat gains")
+            print(f"\nCurrent Combat Stats:")
+            print(f"  Strength: {self.player.strength} (+{self.player.strength * 3} damage)")
+            dodge_chance = min(self.player.agility * 2, 50)
+            print(f"  Agility: {self.player.agility} ({dodge_chance}% dodge chance)")
+            print(f"  Vitality: {self.player.vitality} (+{self.player.vitality * 2} defense)")
             
-            choice = input("\nSelect training (0 to exit): ").strip()
+            print("\n--- Training Options ---")
+            print(f"1. Train Strength (50 gold, +{int(1 * multiplier)} STR)")
+            print(f"2. Train Agility (50 gold, +{int(1 * multiplier)} AGI)")
+            print(f"3. Train Vitality (50 gold, +{int(1 * multiplier)} VIT)")
+            print(f"4. Intensive Training (200 gold, +{int(2 * multiplier)} to all stats)")
+            print("0. Back to main menu")
+            
+            choice = input("\nWhat would you like to train? ").strip()
             
             if choice == "0":
                 break
             elif choice == "1":
-                if self.player.train_at_gym("health"):
-                    pass
+                if self.player.gold >= 50:
+                    self.player.gold -= 50
+                    gain = int(1 * multiplier)
+                    self.player.strength += gain
+                    print(f"\n💪 Strength training complete! +{gain} STR (now {self.player.strength})")
+                    if gain > 1:
+                        print(f"   ✨ Happiness bonus gave you extra gains!")
                 else:
-                    print(f"\n❌ Not enough energy! Need 15 energy, have {self.player.energy}")
+                    print("\n❌ Not enough gold! Need 50 gold.")
             elif choice == "2":
-                if self.player.train_at_gym("mana"):
-                    pass
+                if self.player.gold >= 50:
+                    self.player.gold -= 50
+                    gain = int(1 * multiplier)
+                    self.player.agility += gain
+                    print(f"\n🏃 Agility training complete! +{gain} AGI (now {self.player.agility})")
+                    if gain > 1:
+                        print(f"   ✨ Happiness bonus gave you extra gains!")
                 else:
-                    print(f"\n❌ Not enough energy! Need 15 energy, have {self.player.energy}")
+                    print("\n❌ Not enough gold! Need 50 gold.")
             elif choice == "3":
-                if self.player.train_at_gym("energy"):
-                    pass
+                if self.player.gold >= 50:
+                    self.player.gold -= 50
+                    gain = int(1 * multiplier)
+                    self.player.vitality += gain
+                    print(f"\n🛡️  Vitality training complete! +{gain} VIT (now {self.player.vitality})")
+                    if gain > 1:
+                        print(f"   ✨ Happiness bonus gave you extra gains!")
                 else:
-                    print(f"\n❌ Not enough energy! Need 15 energy, have {self.player.energy}")
+                    print("\n❌ Not enough gold! Need 50 gold.")
+            elif choice == "4":
+                if self.player.gold >= 200:
+                    self.player.gold -= 200
+                    gain = int(2 * multiplier)
+                    self.player.strength += gain
+                    self.player.agility += gain
+                    self.player.vitality += gain
+                    print(f"\n🌟 Intensive training complete! +{gain} to all stats")
+                    print(f"STR: {self.player.strength}, AGI: {self.player.agility}, VIT: {self.player.vitality}")
+                    if gain > 2:
+                        print(f"   ✨ Happiness bonus gave you extra gains!")
+                else:
+                    print("\n❌ Not enough gold! Need 200 gold.")
             else:
                 print("\n❌ Invalid choice!")
     
     def property_menu(self):
         """Property management menu"""
         while True:
-            print("\n🏠 PROPERTY MANAGEMENT 🏠")
-            print(f"\nYour Properties: {len(self.player.properties)}")
-            print(f"Total Happiness: {self.player.happiness}/{self.player.max_happiness}")
+            print("\n🏠 PROPERTY MARKET 🏠")
+            print(f"Your gold: {self.player.gold}")
+            print(f"\nYou own {len(self.player.properties)} properties")
             
-            if self.player.properties:
-                for i, prop in enumerate(self.player.properties, 1):
-                    print(f"\n{i}. {prop.name}")
-                    print(f"   {prop.description}")
-                    print(f"   Happiness: +{prop.get_total_happiness()}")
-                    print(f"   Upgrades: {len(prop.upgrades)}")
-                    if prop.for_sale:
-                        sale_s = prop.sale_price // 12
-                        sale_p = prop.sale_price % 12
-                        print(f"   🏷️  FOR SALE: {sale_s}s {sale_p}d" if sale_p > 0 else f"   🏷️  FOR SALE: {sale_s}s")
-                    if prop.for_rent:
-                        rent_s = prop.rent_price // 12
-                        rent_p = prop.rent_price % 12
-                        print(f"   🏷️  FOR RENT: {rent_s}s {rent_p}d" if rent_p > 0 else f"   🏷️  FOR RENT: {rent_s}s")
-            
-            print("\n--- Options ---")
-            print("1. Buy Property")
-            print("2. Upgrade Property")
-            print("3. List Property for Sale")
-            print("4. List Property for Rent")
-            print("5. Browse Marketplace")
+            print("\n--- Property Options ---")
+            print("1. Browse Properties for Sale")
+            print("2. View My Properties")
+            print("3. Upgrade a Property")
+            print("4. Sell a Property")
+            print("5. List Property for Rent")
+            print("6. View Rental Listings")
             print("0. Back to main menu")
             
-            choice = input("\nSelect option (0 to exit): ").strip()
+            choice = input("\nWhat would you like to do? ").strip()
             
             if choice == "0":
                 break
             elif choice == "1":
-                self.buy_property()
+                self.browse_properties()
             elif choice == "2":
-                self.upgrade_property()
+                self.view_my_properties()
             elif choice == "3":
-                self.list_property_for_sale()
+                self.upgrade_property()
             elif choice == "4":
-                self.list_property_for_rent()
+                self.sell_property()
             elif choice == "5":
-                self.property_marketplace()
+                self.list_for_rent()
+            elif choice == "6":
+                self.view_rental_listings()
             else:
                 print("\n❌ Invalid choice!")
     
-    def buy_property(self):
-        """Buy a new property"""
-        available_properties = [
-            Property("Cottage", "A small cozy cottage", 600),
-            Property("Town House", "A comfortable house in town", 1200),
-            Property("Manor", "A grand manor with gardens", 2400),
-            Property("Castle", "A magnificent castle", 4800),
-        ]
+    def browse_properties(self):
+        """Browse and buy properties"""
+        print("\n🏠 PROPERTIES FOR SALE 🏠")
+        print(f"Your gold: {self.player.gold}")
+        print("\nAvailable Properties:")
         
-        print("\n🏠 Available Properties:")
-        for i, prop in enumerate(available_properties, 1):
-            price_s = prop.base_price // 12
-            price_p = prop.base_price % 12
-            price_str = f"{price_s}s {price_p}d" if price_p > 0 else f"{price_s}s"
-            print(f"{i}. {prop.name} - {price_str}")
+        for i, prop in enumerate(self.property_market.available_properties, 1):
+            price = prop.get_price_in_gold()
+            happiness = {'cottage': 10, 'manor': 25, 'castle': 50}.get(prop.property_type, 0)
+            print(f"{i}. {prop.name} ({prop.property_type.capitalize()})")
+            print(f"   Price: {prop.price_shillings}s {prop.price_pennies}p ({price}g)")
+            print(f"   Size: {prop.size} sq ft | Max Upgrades: {prop.max_upgrades}")
+            print(f"   Base Happiness: +{happiness}")
             print(f"   {prop.description}")
         
-        choice = input("\nSelect property to buy (0 to cancel): ").strip()
+        print("\n0. Back")
+        
+        choice = input("\nSelect property to buy (0 to go back): ").strip()
+        
+        if choice == "0":
+            return
         
         try:
             idx = int(choice) - 1
-            if 0 <= idx < len(available_properties):
-                prop = available_properties[idx]
-                if self.player.get_total_pennies() >= prop.base_price:
-                    price_s = prop.base_price // 12
-                    price_p = prop.base_price % 12
-                    self.player.remove_currency(price_s, price_p)
-                    prop.owner = self.player.name
-                    self.player.properties.append(prop)
-                    self.player.update_happiness()
-                    print(f"\n✅ Purchased {prop.name}!")
+            if 0 <= idx < len(self.property_market.available_properties):
+                prop = self.property_market.available_properties[idx]
+                price = prop.get_price_in_gold()
+                
+                if self.player.gold >= price:
+                    confirm = input(f"\nBuy {prop.name} for {price}g? (y/n): ").strip().lower()
+                    if confirm == 'y':
+                        self.player.gold -= price
+                        # Create a new instance to avoid sharing references
+                        new_prop = Property(
+                            prop.property_type, prop.name, prop.description,
+                            prop.price_shillings, prop.price_pennies,
+                            prop.size, prop.max_upgrades
+                        )
+                        self.player.add_property(new_prop)
+                        print(f"\n✅ Congratulations! You are now the owner of {prop.name}!")
+                        print(f"😊 Your happiness increased to {self.player.happiness}!")
                 else:
-                    price_s = prop.base_price // 12
-                    price_p = prop.base_price % 12
-                    need_str = f"{price_s}s {price_p}d" if price_p > 0 else f"{price_s}s"
-                    print(f"\n❌ Not enough currency! Need {need_str}, have {self.player.format_currency()}")
-        except (ValueError, IndexError):
+                    print(f"\n❌ Not enough gold! Need {price}g, have {self.player.gold}g")
+            else:
+                print("\n❌ Invalid choice!")
+        except ValueError:
             print("\n❌ Invalid input!")
+    
+    def view_my_properties(self):
+        """View player's owned properties"""
+        if not self.player.properties:
+            print("\n🏚️  You don't own any properties yet.")
+            return
+        
+        print("\n🏠 MY PROPERTIES 🏠")
+        for i, prop in enumerate(self.player.properties, 1):
+            status = "🔒 Rented" if prop.is_rented else "✅ Vacant"
+            print(f"\n{i}. {prop.name} ({prop.property_type.capitalize()}) - {status}")
+            print(f"   Size: {prop.size} sq ft")
+            print(f"   Upgrades: {len(prop.upgrades)}/{prop.max_upgrades}")
+            print(f"   Happiness Bonus: +{prop.calculate_happiness_bonus()}")
+            
+            if prop.upgrades:
+                print(f"   Installed Upgrades:")
+                for upgrade in prop.upgrades:
+                    print(f"     • {upgrade.name} (+{upgrade.happiness_bonus} happiness)")
+            
+            if prop.is_rented:
+                print(f"   Rented to: {prop.rented_to}")
+                print(f"   Rent: {prop.rent_amount}g/period")
+        
+        input("\nPress Enter to continue...")
     
     def upgrade_property(self):
         """Upgrade a property"""
         if not self.player.properties:
-            print("\n❌ You don't own any properties!")
+            print("\n🏚️  You don't own any properties yet.")
             return
         
-        print("\n🏠 Your Properties:")
-        for i, prop in enumerate(self.player.properties, 1):
-            print(f"{i}. {prop.name} (Upgrades: {len(prop.upgrades)})")
+        print("\n🔧 UPGRADE PROPERTY 🔧")
+        print("Select a property to upgrade:")
         
-        choice = input("\nSelect property to upgrade (0 to cancel): ").strip()
+        for i, prop in enumerate(self.player.properties, 1):
+            print(f"{i}. {prop.name} - Upgrades: {len(prop.upgrades)}/{prop.max_upgrades}")
+        
+        print("\n0. Back")
+        
+        choice = input("\nSelect property: ").strip()
+        
+        if choice == "0":
+            return
         
         try:
             idx = int(choice) - 1
             if 0 <= idx < len(self.player.properties):
                 prop = self.player.properties[idx]
                 
-                available_upgrades = [
-                    PropertyUpgrade("Garden", "A beautiful garden", 240, 5),
-                    PropertyUpgrade("Library", "A cozy library", 360, 8),
-                    PropertyUpgrade("Workshop", "A crafting workshop", 480, 10),
-                    PropertyUpgrade("Enchanted Fountain", "A magical fountain", 720, 15),
-                    PropertyUpgrade("Observatory", "An astronomical observatory", 960, 20),
-                ]
+                if len(prop.upgrades) >= prop.max_upgrades:
+                    print(f"\n❌ {prop.name} is fully upgraded!")
+                    return
+                
+                # Show available upgrades for this property type
+                available_upgrades = self.property_market.available_upgrades.get(prop.property_type, [])
+                
+                if not available_upgrades:
+                    print(f"\n❌ No upgrades available for {prop.property_type}s!")
+                    return
                 
                 print(f"\n🔧 Available Upgrades for {prop.name}:")
                 for i, upgrade in enumerate(available_upgrades, 1):
-                    price_s = upgrade.price // 12
-                    price_p = upgrade.price % 12
-                    price_str = f"{price_s}s {price_p}d" if price_p > 0 else f"{price_s}s"
-                    print(f"{i}. {upgrade.name} - {price_str} (+{upgrade.happiness_boost} happiness)")
+                    print(f"{i}. {upgrade.name} - {upgrade.cost}g (+{upgrade.happiness_bonus} happiness)")
                     print(f"   {upgrade.description}")
                 
-                upgrade_choice = input("\nSelect upgrade (0 to cancel): ").strip()
-                upgrade_idx = int(upgrade_choice) - 1
+                print("\n0. Cancel")
                 
-                if 0 <= upgrade_idx < len(available_upgrades):
-                    upgrade = available_upgrades[upgrade_idx]
-                    if self.player.get_total_pennies() >= upgrade.price:
-                        price_s = upgrade.price // 12
-                        price_p = upgrade.price % 12
-                        self.player.remove_currency(price_s, price_p)
-                        prop.add_upgrade(upgrade)
-                        self.player.update_happiness()
-                        print(f"\n✅ Added {upgrade.name} to {prop.name}!")
-                        print(f"😊 Happiness is now {self.player.happiness}/{self.player.max_happiness}")
+                upgrade_choice = input("\nSelect upgrade: ").strip()
+                
+                if upgrade_choice == "0":
+                    return
+                
+                try:
+                    upgrade_idx = int(upgrade_choice) - 1
+                    if 0 <= upgrade_idx < len(available_upgrades):
+                        upgrade = available_upgrades[upgrade_idx]
+                        
+                        if self.player.gold >= upgrade.cost:
+                            confirm = input(f"\nInstall {upgrade.name} for {upgrade.cost}g? (y/n): ").strip().lower()
+                            if confirm == 'y':
+                                self.player.gold -= upgrade.cost
+                                # Create new upgrade instance
+                                new_upgrade = PropertyUpgrade(
+                                    upgrade.name, upgrade.description,
+                                    upgrade.cost, upgrade.happiness_bonus
+                                )
+                                prop.add_upgrade(new_upgrade)
+                                self.player.calculate_happiness()
+                                print(f"\n✅ Installed {upgrade.name}!")
+                                print(f"😊 Your happiness increased to {self.player.happiness}!")
+                        else:
+                            print(f"\n❌ Not enough gold! Need {upgrade.cost}g, have {self.player.gold}g")
                     else:
-                        price_s = upgrade.price // 12
-                        price_p = upgrade.price % 12
-                        need_str = f"{price_s}s {price_p}d" if price_p > 0 else f"{price_s}s"
-                        print(f"\n❌ Not enough currency! Need {need_str}, have {self.player.format_currency()}")
-        except (ValueError, IndexError):
+                        print("\n❌ Invalid choice!")
+                except ValueError:
+                    print("\n❌ Invalid input!")
+            else:
+                print("\n❌ Invalid choice!")
+        except ValueError:
             print("\n❌ Invalid input!")
     
-    def list_property_for_sale(self):
-        """List a property for sale"""
+    def sell_property(self):
+        """Sell a property"""
         if not self.player.properties:
-            print("\n❌ You don't own any properties!")
+            print("\n🏚️  You don't own any properties yet.")
             return
         
-        print("\n🏠 Your Properties:")
-        for i, prop in enumerate(self.player.properties, 1):
-            status = ""
-            if prop.for_sale:
-                status = " [Already for sale]"
-            elif prop.for_rent:
-                status = " [Listed for rent]"
-            print(f"{i}. {prop.name} (Value: ~{prop.get_total_value()} pennies){status}")
+        print("\n💰 SELL PROPERTY 💰")
+        print("Select a property to sell:")
         
-        choice = input("\nSelect property to list for sale (0 to cancel): ").strip()
+        for i, prop in enumerate(self.player.properties, 1):
+            sell_price = prop.get_price_in_gold() // 2
+            print(f"{i}. {prop.name} - Sell for: {sell_price}g (50% of purchase price)")
+        
+        print("\n0. Back")
+        
+        choice = input("\nSelect property to sell: ").strip()
+        
+        if choice == "0":
+            return
         
         try:
             idx = int(choice) - 1
             if 0 <= idx < len(self.player.properties):
                 prop = self.player.properties[idx]
-                suggested_price = int(prop.get_total_value() * 1.2)
-                sugg_s = suggested_price // 12
-                sugg_p = suggested_price % 12
-                print(f"\nSuggested price: {sugg_s}s {sugg_p}d" if sugg_p > 0 else f"\nSuggested price: {sugg_s}s")
+                sell_price = prop.get_price_in_gold() // 2
                 
-                price_input = input("Enter sale price in shillings (0 to cancel): ").strip()
-                price_shillings = int(price_input)
-                
-                if price_shillings > 0:
-                    prop.for_sale = True
-                    prop.sale_price = price_shillings * 12
-                    prop.for_rent = False  # Can't be both
-                    print(f"\n✅ {prop.name} is now listed for sale at {price_shillings}s!")
-        except (ValueError, IndexError):
+                confirm = input(f"\nSell {prop.name} for {sell_price}g? (y/n): ").strip().lower()
+                if confirm == 'y':
+                    self.player.gold += sell_price
+                    self.player.properties.pop(idx)
+                    self.player.calculate_happiness()
+                    print(f"\n✅ Sold {prop.name} for {sell_price}g!")
+                    print(f"😊 Your happiness is now {self.player.happiness}")
+            else:
+                print("\n❌ Invalid choice!")
+        except ValueError:
             print("\n❌ Invalid input!")
     
-    def list_property_for_rent(self):
+    def list_for_rent(self):
         """List a property for rent"""
         if not self.player.properties:
-            print("\n❌ You don't own any properties!")
+            print("\n🏚️  You don't own any properties yet.")
             return
         
-        print("\n🏠 Your Properties:")
-        for i, prop in enumerate(self.player.properties, 1):
-            status = ""
-            if prop.for_rent:
-                status = " [Already for rent]"
-            elif prop.for_sale:
-                status = " [Listed for sale]"
-            print(f"{i}. {prop.name}{status}")
+        print("\n📋 LIST FOR RENT 📋")
+        print("Select a property to list:")
         
-        choice = input("\nSelect property to list for rent (0 to cancel): ").strip()
+        available = [p for p in self.player.properties if not p.is_rented and not p.listed_for_rent]
+        
+        if not available:
+            print("\n❌ No available properties to list! (All are rented or already listed)")
+            return
+        
+        for i, prop in enumerate(available, 1):
+            print(f"{i}. {prop.name}")
+        
+        print("\n0. Back")
+        
+        choice = input("\nSelect property: ").strip()
+        
+        if choice == "0":
+            return
         
         try:
             idx = int(choice) - 1
-            if 0 <= idx < len(self.player.properties):
-                prop = self.player.properties[idx]
-                suggested_rent = int(prop.get_total_value() * 0.1)
-                sugg_s = suggested_rent // 12
-                sugg_p = suggested_rent % 12
-                print(f"\nSuggested rent: {sugg_s}s {sugg_p}d" if sugg_p > 0 else f"\nSuggested rent: {sugg_s}s")
+            if 0 <= idx < len(available):
+                prop = available[idx]
+                suggested_rent = prop.get_price_in_gold() // 10
                 
-                rent_input = input("Enter rent price in shillings (0 to cancel): ").strip()
-                rent_shillings = int(rent_input)
+                rent_input = input(f"\nSet rent amount (suggested: {suggested_rent}g): ").strip()
                 
-                if rent_shillings > 0:
-                    prop.for_rent = True
-                    prop.rent_price = rent_shillings * 12
-                    prop.for_sale = False  # Can't be both
-                    print(f"\n✅ {prop.name} is now listed for rent at {rent_shillings}s!")
-        except (ValueError, IndexError):
+                try:
+                    rent = int(rent_input) if rent_input else suggested_rent
+                    
+                    if rent > 0:
+                        prop.listed_for_rent = True
+                        prop.rent_amount = rent
+                        self.property_market.rental_listings.append({
+                            'owner': self.player.name,
+                            'property': prop,
+                            'rent': rent
+                        })
+                        print(f"\n✅ Listed {prop.name} for {rent}g per period!")
+                    else:
+                        print("\n❌ Rent must be positive!")
+                except ValueError:
+                    print("\n❌ Invalid rent amount!")
+            else:
+                print("\n❌ Invalid choice!")
+        except ValueError:
             print("\n❌ Invalid input!")
     
-    def property_marketplace(self):
-        """Browse and purchase/rent properties from marketplace"""
-        # In a real multiplayer game, this would fetch from a server
-        # For now, we'll simulate with properties listed by players
-        print("\n🏪 PROPERTY MARKETPLACE 🏪")
-        print("\n(In multiplayer, you would see other players' properties here)")
-        print("For now, this is a placeholder for the marketplace system.")
-        print("\nFeatures to be implemented in multiplayer:")
-        print("- View all properties listed by other players")
-        print("- Buy properties that are for sale")
-        print("- Rent properties from other players")
-        print("- Search and filter properties")
-        input("\nPress Enter to continue...")
+    def view_rental_listings(self):
+        """View properties available for rent"""
+        if not self.property_market.rental_listings:
+            print("\n📋 No properties currently listed for rent.")
+            return
+        
+        print("\n🏘️  RENTAL LISTINGS 🏘️")
+        print(f"Your gold: {self.player.gold}")
+        
+        for i, listing in enumerate(self.property_market.rental_listings, 1):
+            prop = listing['property']
+            print(f"\n{i}. {prop.name} ({prop.property_type.capitalize()})")
+            print(f"   Owner: {listing['owner']}")
+            print(f"   Rent: {listing['rent']}g per period")
+            print(f"   Happiness Bonus: +{prop.calculate_happiness_bonus()}")
+        
+        print("\n0. Back")
+        
+        choice = input("\nSelect property to rent (0 to go back): ").strip()
+        
+        if choice == "0":
+            return
+        
+        try:
+            idx = int(choice) - 1
+            if 0 <= idx < len(self.property_market.rental_listings):
+                listing = self.property_market.rental_listings[idx]
+                prop = listing['property']
+                rent = listing['rent']
+                
+                if listing['owner'] == self.player.name:
+                    print("\n❌ You can't rent your own property!")
+                    return
+                
+                if self.player.gold >= rent:
+                    confirm = input(f"\nRent {prop.name} for {rent}g? (y/n): ").strip().lower()
+                    if confirm == 'y':
+                        self.player.gold -= rent
+                        prop.is_rented = True
+                        prop.rented_to = self.player.name
+                        prop.listed_for_rent = False
+                        self.property_market.rental_listings.pop(idx)
+                        print(f"\n✅ You are now renting {prop.name}!")
+                        print(f"💡 Note: Rental mechanics are simplified in this version.")
+                else:
+                    print(f"\n❌ Not enough gold! Need {rent}g, have {self.player.gold}g")
+            else:
+                print("\n❌ Invalid choice!")
+        except ValueError:
+            print("\n❌ Invalid input!")
     
     def save_game(self):
         """Save game to file"""
@@ -858,6 +1084,8 @@ class Game:
             with open(self.save_file, 'w') as f:
                 json.dump(self.player.to_dict(), f, indent=2)
             print("\n💾 Game saved successfully!")
+            # Update leaderboard
+            self.update_leaderboard()
         except Exception as e:
             print(f"\n❌ Failed to save game: {e}")
     
@@ -892,9 +1120,36 @@ class Game:
             self.player.level = data['level']
             self.player.last_energy_update = datetime.fromisoformat(data['last_energy_update'])
             
-            # Load happiness system
+            # Load combat stats (with defaults for older save files)
+            self.player.strength = data.get('strength', 0)
+            self.player.agility = data.get('agility', 0)
+            self.player.vitality = data.get('vitality', 0)
+            
+            # Load properties and happiness (with defaults for older save files)
             self.player.happiness = data.get('happiness', 0)
             self.player.max_happiness = data.get('max_happiness', 100)
+            
+            if 'properties' in data:
+                for p_data in data['properties']:
+                    prop = Property(
+                        p_data['property_type'], p_data['name'], p_data['description'],
+                        p_data['price_shillings'], p_data['price_pennies'],
+                        p_data['size'], p_data['max_upgrades']
+                    )
+                    prop.is_rented = p_data.get('is_rented', False)
+                    prop.rented_to = p_data.get('rented_to')
+                    prop.rent_amount = p_data.get('rent_amount', 0)
+                    prop.listed_for_rent = p_data.get('listed_for_rent', False)
+                    
+                    # Load upgrades
+                    for u_data in p_data.get('upgrades', []):
+                        upgrade = PropertyUpgrade(
+                            u_data['name'], u_data['description'],
+                            u_data['cost'], u_data['happiness_bonus']
+                        )
+                        prop.upgrades.append(upgrade)
+                    
+                    self.player.properties.append(prop)
             
             if data['weapon']:
                 w = data['weapon']
@@ -938,6 +1193,76 @@ class Game:
             print(f"\n❌ Failed to load game: {e}")
             return False
     
+    def update_leaderboard(self):
+        """Update leaderboard with current player stats"""
+        try:
+            # Load existing leaderboard
+            leaderboard = []
+            try:
+                with open(self.leaderboard_file, 'r') as f:
+                    leaderboard = json.load(f)
+            except FileNotFoundError:
+                pass
+            
+            # Create player entry
+            player_entry = {
+                'name': self.player.name,
+                'level': self.player.level,
+                'experience': self.player.experience,
+                'gold': self.player.gold,
+                'max_health': self.player.max_health,
+                'weapon': self.player.weapon.name if self.player.weapon else "None",
+                'armor': self.player.armor.name if self.player.armor else "None"
+            }
+            
+            # Update or add player to leaderboard
+            updated = False
+            for i, entry in enumerate(leaderboard):
+                if entry['name'] == self.player.name:
+                    leaderboard[i] = player_entry
+                    updated = True
+                    break
+            
+            if not updated:
+                leaderboard.append(player_entry)
+            
+            # Save updated leaderboard
+            with open(self.leaderboard_file, 'w') as f:
+                json.dump(leaderboard, f, indent=2)
+                
+        except Exception as e:
+            print(f"\n⚠️  Failed to update leaderboard: {e}")
+    
+    def display_leaderboard(self):
+        """Display the leaderboard"""
+        try:
+            with open(self.leaderboard_file, 'r') as f:
+                leaderboard = json.load(f)
+            
+            if not leaderboard:
+                print("\n📊 Leaderboard is empty!")
+                return
+            
+            # Sort by level (descending), then by experience (descending)
+            leaderboard.sort(key=lambda x: (x['level'], x['experience']), reverse=True)
+            
+            print("\n" + "="*70)
+            print("🏆 LEADERBOARD 🏆".center(70))
+            print("="*70)
+            print(f"{'Rank':<6} {'Name':<15} {'Level':<7} {'Exp':<10} {'Gold':<10} {'Weapon':<15}")
+            print("-"*70)
+            
+            for i, entry in enumerate(leaderboard, 1):
+                rank_icon = "🥇" if i == 1 else "🥈" if i == 2 else "🥉" if i == 3 else f"{i}."
+                print(f"{rank_icon:<6} {entry['name']:<15} {entry['level']:<7} {entry['experience']:<10} {entry['gold']:<10} {entry['weapon']:<15}")
+            
+            print("="*70)
+            
+        except FileNotFoundError:
+            print("\n📊 Leaderboard is empty! Play the game and save to appear on the leaderboard.")
+        except Exception as e:
+            print(f"\n❌ Failed to load leaderboard: {e}")
+    
     def main_menu(self):
         """Main game menu"""
         print("\n" + "="*50)
@@ -978,11 +1303,12 @@ class Game:
             print("1. Weapon Shop")
             print("2. Armor Shop")
             print("3. Combat (Costs 25 Energy)")
-            print("4. Gym Training (Costs 15 Energy)")
-            print("5. Property Management")
-            print("6. Rest")
-            print("7. Save Game")
-            print("8. Exit")
+            print("4. Rest")
+            print("5. Training Gym")
+            print("6. Property Market")
+            print("7. View Leaderboard")
+            print("8. Save Game")
+            print("9. Exit")
             
             choice = input("\nWhat would you like to do? ").strip()
             
@@ -995,12 +1321,14 @@ class Game:
             elif choice == "4":
                 self.gym_menu()
             elif choice == "5":
-                self.property_menu()
+                self.gym()
             elif choice == "6":
-                self.rest()
+                self.property_menu()
             elif choice == "7":
-                self.save_game()
+                self.display_leaderboard()
             elif choice == "8":
+                self.save_game()
+            elif choice == "9":
                 print("\n👋 Thanks for playing High Wizardy!")
                 save = input("Save game before exit? (y/n): ").strip().lower()
                 if save == 'y':
