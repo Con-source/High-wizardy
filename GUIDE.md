@@ -23,24 +23,43 @@ python3 game.py
 ### Stats
 - **Health**: Your life points (starts at 100)
 - **Mana**: Used for magical attacks (starts at 100)
-- **Energy**: Required to initiate combat (starts at 100)
-- **Gold**: Currency for buying equipment (starts at 100)
+- **Energy**: Required to initiate combat and training (starts at 100)
+- **Currency**: Shillings and Pennies for purchases (starts at 8s 4d)
+- **Happiness**: Bonus multiplier for gym training (0-100, from properties)
 
 ## 🛒 Shopping
 
+### Currency System
+- **1 Shilling (s) = 12 Pennies (d)**
+- Prices displayed as "Xs Yd" (e.g., "4s 2d" = 4 shillings and 2 pennies)
+- Starting currency: 8 shillings, 4 pennies (100 pennies total)
+
 ### Weapons (5 available)
-1. **Wooden Sword** - 50g, 5 damage
-2. **Iron Sword** - 150g, 15 damage
-3. **Steel Sword** - 300g, 30 damage
-4. **Fire Staff** - 400g, 40 damage, 10 mana cost (magic)
-5. **Legendary Blade** - 1000g, 80 damage, 5 mana cost (magic)
+1. **Wooden Sword** - 4s 2d, 5 damage
+2. **Iron Sword** - 12s 6d, 15 damage
+3. **Steel Sword** - 25s, 30 damage
+4. **Fire Staff** - 33s 4d, 40 damage, 10 mana cost (magic)
+5. **Legendary Blade** - 83s 4d, 80 damage, 5 mana cost (magic)
 
 ### Armor (5 available)
-1. **Leather Armor** - 60g, 5 defense
-2. **Iron Armor** - 180g, 15 defense
-3. **Steel Armor** - 350g, 30 defense
-4. **Enchanted Robes** - 500g, 40 defense
-5. **Dragon Scale Armor** - 1200g, 70 defense
+1. **Leather Armor** - 5s, 5 defense
+2. **Iron Armor** - 15s, 15 defense
+3. **Steel Armor** - 29s 2d, 30 defense
+4. **Enchanted Robes** - 41s 8d, 40 defense
+5. **Dragon Scale Armor** - 100s, 70 defense
+
+### Properties (4 available)
+1. **Cottage** - 50s (small cozy cottage)
+2. **Town House** - 100s (comfortable house in town)
+3. **Manor** - 200s (grand manor with gardens)
+4. **Castle** - 400s (magnificent castle)
+
+### Property Upgrades (5 available)
+1. **Garden** - 20s, +5 happiness
+2. **Library** - 30s, +8 happiness
+3. **Workshop** - 40s, +10 happiness
+4. **Enchanted Fountain** - 60s, +15 happiness
+5. **Observatory** - 80s, +20 happiness
 
 ## 🎮 Main Menu Options
 
@@ -141,17 +160,56 @@ Combat stats enhance your combat effectiveness:
 - Upgrade to Iron equipment when you have ~350g
 
 ### Mid Game
+- Buy your first property (Cottage or Town House)
+- Add upgrades to increase happiness
 - Get Steel equipment for better stats
 - Balance training stats with equipment upgrades
 - Train Vitality to survive tougher enemies
 - Fight stronger enemies (Orcs, Dark Mages)
+- Use gym training to boost your max stats
 - Consider magical weapons if you like spell combat
 
 ### Late Game
+- Own multiple properties with upgrades
+- Max out your happiness for 1.5x gym bonus
 - Save for legendary equipment
 - Max out combat stats (aim for 10+ in each)
 - Challenge Dragons for big rewards
 - Max out your character's level and equipment
+- List properties on marketplace for trading
+
+## 🏠 Property Management
+
+### Buying Properties
+- Properties provide happiness which boosts gym training
+- Start with a Cottage (50s) if you can afford it
+- Bigger properties cost more but provide a foundation for more upgrades
+
+### Upgrading Properties
+- Each upgrade adds happiness to your total
+- Higher happiness = better gym training multipliers
+- Observatory gives the most happiness (+20)
+- Plan your upgrades based on your budget
+
+### Property Marketplace
+- List properties for sale or rent
+- Set your own prices for listings
+- Browse other players' properties (in multiplayer)
+- Properties sell with all their upgrades included
+
+## 💪 Gym Training System
+
+### How It Works
+- Costs 15 energy per training session
+- Choose between Health, Mana, or Energy training
+- Base gains: Health +10, Mana +5, Energy +5
+- Happiness bonus multiplies these gains (1.0x to 1.5x)
+
+### Maximizing Gains
+- Max out your happiness first (100/100)
+- With max happiness: Health +15, Mana +7, Energy +7
+- Train regularly when you have spare energy
+- Balance your stat improvements based on your playstyle
 
 ### Combat Optimization
 - **For Glass Cannon**: Focus on Strength + powerful weapons

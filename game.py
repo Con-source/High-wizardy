@@ -130,7 +130,9 @@ class Player:
         self.max_mana = 100
         self.energy = 100
         self.max_energy = 100
-        self.gold = 100
+        # Currency: 1 Shilling = 12 Pennies
+        self.shillings = 8  # Starting with 8 shillings, 4 pennies (equivalent to 100 pennies)
+        self.pennies = 4
         self.weapon: Optional[Weapon] = None
         self.armor: Optional[Armor] = None
         self.inventory: List[Item] = []
@@ -146,6 +148,47 @@ class Player:
         self.happiness = 0
         self.max_happiness = 100
     
+    def remove_currency(self, shillings: int = 0, pennies: int = 0) -> bool:
+        """Remove currency if available, return True if successful"""
+        # Convert to total pennies for comparison
+        total_needed = shillings * 12 + pennies
+        total_have = self.shillings * 12 + self.pennies
+        
+        if total_have >= total_needed:
+            # Remove the currency
+            self.shillings -= shillings
+            self.pennies -= pennies
+            
+            # Handle negative pennies
+            while self.pennies < 0:
+                self.shillings -= 1
+                self.pennies += 12
+            
+            return True
+        return False
+    
+    def get_total_pennies(self) -> int:
+        """Get total currency in pennies"""
+        return self.shillings * 12 + self.pennies
+    
+    def format_currency(self, shillings: int = None, pennies: int = None) -> str:
+        """Format currency for display"""
+        if shillings is None and pennies is None:
+            shillings = self.shillings
+            pennies = self.pennies
+        elif pennies is None:
+            pennies = 0
+        elif shillings is None:
+            shillings = 0
+
+        if shillings == 0 and pennies == 0:
+            return "0s 0d"
+        elif shillings > 0 and pennies > 0:
+            return f"{shillings}s {pennies}d"
+        elif shillings > 0:
+            return f"{shillings}s"
+        else:
+            return f"{pennies}d"
     def update_energy(self):
         """Regenerate energy: 5 energy every 15 minutes"""
         current_time = datetime.now()
@@ -255,6 +298,42 @@ class Player:
         print(f"\n🎉 Level Up! You are now level {self.level}!")
         print(f"Max Health: {self.max_health}, Max Mana: {self.max_mana}, Max Energy: {self.max_energy}")
     
+    def update_happiness(self):
+        """Update happiness based on owned properties"""
+        self.happiness = 0
+        for prop in self.properties:
+            self.happiness += prop.get_total_happiness()
+        self.happiness = min(self.max_happiness, self.happiness)
+    
+    def get_happiness_bonus(self) -> float:
+        """Get gym stat bonus multiplier based on happiness (1.0 to 1.5)"""
+        if self.max_happiness == 0:
+            return 1.0
+        return 1.0 + (self.happiness / self.max_happiness) * 0.5
+    
+    def train_at_gym(self, stat: str) -> bool:
+        """Train at gym to improve stats, requires energy"""
+        cost = 15  # Energy cost for gym training
+        if not self.use_energy(cost):
+            return False
+        
+        bonus = self.get_happiness_bonus()
+        
+        if stat == "health":
+            gain = int(10 * bonus)
+            self.max_health += gain
+            print(f"\n💪 Health training complete! Max Health +{gain} (Happiness Bonus: {bonus:.2f}x)")
+        elif stat == "mana":
+            gain = int(5 * bonus)
+            self.max_mana += gain
+            print(f"\n🔮 Mana training complete! Max Mana +{gain} (Happiness Bonus: {bonus:.2f}x)")
+        elif stat == "energy":
+            gain = int(5 * bonus)
+            self.max_energy += gain
+            print(f"\n⚡ Energy training complete! Max Energy +{gain} (Happiness Bonus: {bonus:.2f}x)")
+        
+        return True
+    
     def to_dict(self):
         """Convert player to dictionary for saving"""
         return {
@@ -265,7 +344,8 @@ class Player:
             'max_mana': self.max_mana,
             'energy': self.energy,
             'max_energy': self.max_energy,
-            'gold': self.gold,
+            'shillings': self.shillings,
+            'pennies': self.pennies,
             'weapon': self.weapon.to_dict() if self.weapon else None,
             'armor': self.armor.to_dict() if self.armor else None,
             'last_energy_update': self.last_energy_update.isoformat(),
@@ -373,7 +453,8 @@ class Game:
         print(f"❤️  Health: {self.player.health}/{self.player.max_health}")
         print(f"💙 Mana: {self.player.mana}/{self.player.max_mana}")
         print(f"⚡ Energy: {self.player.energy}/{self.player.max_energy}")
-        print(f"💰 Gold: {self.player.gold}")
+        print(f"💰 Currency: {self.player.format_currency()}")
+        print(f"😊 Happiness: {self.player.happiness}/{self.player.max_happiness} (Gym Bonus: {self.player.get_happiness_bonus():.2f}x)")
         print(f"⭐ Experience: {self.player.experience}/{self.player.level * 100}")
         
         if self.player.weapon:
@@ -410,11 +491,15 @@ class Game:
         """Weapon shop menu"""
         while True:
             print("\n🗡️  WEAPON SHOP 🗡️")
-            print(f"Your gold: {self.player.gold}")
+            print(f"Your currency: {self.player.format_currency()}")
             print("\nAvailable Weapons:")
             for i, weapon in enumerate(self.shop.weapons, 1):
                 mana_info = f", Mana: {weapon.mana_cost}" if weapon.mana_cost > 0 else ""
-                print(f"{i}. {weapon.name} - {weapon.price}g (Damage: {weapon.damage}{mana_info})")
+                # Convert price to shillings and pennies
+                shillings = weapon.price // 12
+                pennies = weapon.price % 12
+                price_str = f"{shillings}s {pennies}d" if pennies > 0 else f"{shillings}s"
+                print(f"{i}. {weapon.name} - {price_str} (Damage: {weapon.damage}{mana_info})")
                 print(f"   {weapon.description}")
             
             print("\n0. Back to main menu")
@@ -428,18 +513,25 @@ class Game:
                 idx = int(choice) - 1
                 if 0 <= idx < len(self.shop.weapons):
                     weapon = self.shop.weapons[idx]
-                    if self.player.gold >= weapon.price:
-                        self.player.gold -= weapon.price
+                    weapon_shillings = weapon.price // 12
+                    weapon_pennies = weapon.price % 12
+                    
+                    if self.player.get_total_pennies() >= weapon.price:
+                        self.player.remove_currency(weapon_shillings, weapon_pennies)
                         old_weapon = self.player.weapon
                         self.player.equip_weapon(weapon)
                         print(f"\n✅ Purchased and equipped {weapon.name}!")
                         if old_weapon:
                             # Sell old weapon for half price
-                            refund = old_weapon.price // 2
-                            self.player.gold += refund
-                            print(f"💰 Sold old weapon for {refund}g")
+                            refund_total = old_weapon.price // 2
+                            refund_shillings = refund_total // 12
+                            refund_pennies = refund_total % 12
+                            self.player.add_currency(refund_shillings, refund_pennies)
+                            refund_str = f"{refund_shillings}s {refund_pennies}d" if refund_pennies > 0 else f"{refund_shillings}s"
+                            print(f"💰 Sold old weapon for {refund_str}")
                     else:
-                        print(f"\n❌ Not enough gold! Need {weapon.price}g, have {self.player.gold}g")
+                        need_str = f"{weapon_shillings}s {weapon_pennies}d" if weapon_pennies > 0 else f"{weapon_shillings}s"
+                        print(f"\n❌ Not enough currency! Need {need_str}, have {self.player.format_currency()}")
                 else:
                     print("\n❌ Invalid choice!")
             except ValueError:
@@ -449,10 +541,14 @@ class Game:
         """Armor shop menu"""
         while True:
             print("\n🛡️  ARMOR SHOP 🛡️")
-            print(f"Your gold: {self.player.gold}")
+            print(f"Your currency: {self.player.format_currency()}")
             print("\nAvailable Armor:")
             for i, armor in enumerate(self.shop.armors, 1):
-                print(f"{i}. {armor.name} - {armor.price}g (Defense: {armor.defense})")
+                # Convert price to shillings and pennies
+                shillings = armor.price // 12
+                pennies = armor.price % 12
+                price_str = f"{shillings}s {pennies}d" if pennies > 0 else f"{shillings}s"
+                print(f"{i}. {armor.name} - {price_str} (Defense: {armor.defense})")
                 print(f"   {armor.description}")
             
             print("\n0. Back to main menu")
@@ -466,18 +562,25 @@ class Game:
                 idx = int(choice) - 1
                 if 0 <= idx < len(self.shop.armors):
                     armor = self.shop.armors[idx]
-                    if self.player.gold >= armor.price:
-                        self.player.gold -= armor.price
+                    armor_shillings = armor.price // 12
+                    armor_pennies = armor.price % 12
+                    
+                    if self.player.get_total_pennies() >= armor.price:
+                        self.player.remove_currency(armor_shillings, armor_pennies)
                         old_armor = self.player.armor
                         self.player.equip_armor(armor)
                         print(f"\n✅ Purchased and equipped {armor.name}!")
                         if old_armor:
                             # Sell old armor for half price
-                            refund = old_armor.price // 2
-                            self.player.gold += refund
-                            print(f"💰 Sold old armor for {refund}g")
+                            refund_total = old_armor.price // 2
+                            refund_shillings = refund_total // 12
+                            refund_pennies = refund_total % 12
+                            self.player.add_currency(refund_shillings, refund_pennies)
+                            refund_str = f"{refund_shillings}s {refund_pennies}d" if refund_pennies > 0 else f"{refund_shillings}s"
+                            print(f"💰 Sold old armor for {refund_str}")
                     else:
-                        print(f"\n❌ Not enough gold! Need {armor.price}g, have {self.player.gold}g")
+                        need_str = f"{armor_shillings}s {armor_pennies}d" if armor_pennies > 0 else f"{armor_shillings}s"
+                        print(f"\n❌ Not enough currency! Need {need_str}, have {self.player.format_currency()}")
                 else:
                     print("\n❌ Invalid choice!")
             except ValueError:
@@ -548,9 +651,12 @@ class Game:
             # Check if enemy is defeated
             if not enemy.is_alive():
                 print(f"\n🎉 Victory! You defeated {enemy.name}!")
-                self.player.gold += enemy.gold_reward
+                reward_shillings = enemy.gold_reward // 12
+                reward_pennies = enemy.gold_reward % 12
+                self.player.add_currency(reward_shillings, reward_pennies)
                 self.player.gain_experience(enemy.exp_reward)
-                print(f"💰 Gained {enemy.gold_reward} gold")
+                reward_str = f"{reward_shillings}s {reward_pennies}d" if reward_pennies > 0 else f"{reward_shillings}s"
+                print(f"💰 Gained {reward_str}")
                 print(f"⭐ Gained {enemy.exp_reward} experience")
                 return
             
@@ -996,7 +1102,20 @@ class Game:
             self.player.max_mana = data['max_mana']
             self.player.energy = data['energy']
             self.player.max_energy = data['max_energy']
-            self.player.gold = data['gold']
+            
+            # Handle currency - backward compatibility with old gold system
+            if 'shillings' in data and 'pennies' in data:
+                self.player.shillings = data['shillings']
+                self.player.pennies = data['pennies']
+            elif 'gold' in data:
+                # Convert old gold to new currency.
+                # NOTE: The conversion rate below assumes 1 gold = 1 penny.
+                # TODO: Verify this rate against old save files to ensure players do not lose purchasing power.
+                OLD_GOLD_TO_PENNIES = 1  # Adjust this if the old economy used a different rate (e.g., 1 gold = 12 pennies)
+                total_pennies = data['gold'] * OLD_GOLD_TO_PENNIES
+                self.player.shillings = total_pennies // 12
+                self.player.pennies = total_pennies % 12
+            
             self.player.experience = data['experience']
             self.player.level = data['level']
             self.player.last_energy_update = datetime.fromisoformat(data['last_energy_update'])
@@ -1039,6 +1158,31 @@ class Game:
             if data['armor']:
                 a = data['armor']
                 self.player.armor = Armor(a['name'], a['description'], a['price'], a['defense'])
+            
+            # Load properties
+            self.player.properties = []
+            if 'properties' in data:
+                for prop_data in data['properties']:
+                    prop = Property(prop_data['name'], prop_data['description'], prop_data['base_price'])
+                    prop.owner = prop_data.get('owner')
+                    prop.for_sale = prop_data.get('for_sale', False)
+                    prop.sale_price = prop_data.get('sale_price', 0)
+                    prop.for_rent = prop_data.get('for_rent', False)
+                    prop.rent_price = prop_data.get('rent_price', 0)
+                    prop.renter = prop_data.get('renter')
+                    
+                    for upgrade_data in prop_data.get('upgrades', []):
+                        upgrade = PropertyUpgrade(
+                            upgrade_data['name'],
+                            upgrade_data['description'],
+                            upgrade_data['price'],
+                            upgrade_data['happiness_boost']
+                        )
+                        prop.add_upgrade(upgrade)
+                    
+                    self.player.properties.append(prop)
+            
+            self.player.update_happiness()
             
             print("\n📂 Game loaded successfully!")
             return True
@@ -1175,7 +1319,7 @@ class Game:
             elif choice == "3":
                 self.combat()
             elif choice == "4":
-                self.rest()
+                self.gym_menu()
             elif choice == "5":
                 self.gym()
             elif choice == "6":
